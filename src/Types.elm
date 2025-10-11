@@ -7,7 +7,10 @@ import Url exposing (Url)
 
 type alias FrontendModel =
     { key : Key
-    , message : String
+    , coupleNames : ( String, String )
+    , weddingDate : String
+    , venue : String
+    , showRsvpForm : Bool
     }
 
 
@@ -19,6 +22,7 @@ type alias BackendModel =
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
+    | ToggleRsvpForm
     | NoOpFrontendMsg
 
 
