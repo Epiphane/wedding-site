@@ -23,6 +23,8 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { guests = initialGuestList
       , rsvps = Dict.empty
+      , authenticatedSessions = Dict.empty
+      , canvas = Dict.empty
       }
     , Cmd.none
     )
@@ -48,7 +50,7 @@ update msg model =
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
-updateFromFrontend _ clientId msg model =
+updateFromFrontend sessionId clientId msg model =
     case msg of
         LookupGuestByName name ->
             let
@@ -79,10 +81,33 @@ updateFromFrontend _ clientId msg model =
 
         AdminLogin password ->
             if password == Env.adminPassword then
-                ( model, Lamdera.sendToFrontend clientId AdminLoginSuccess )
+                let
+                    updatedSessions =
+                        Dict.insert sessionId True model.authenticatedSessions
+                in
+                ( { model | authenticatedSessions = updatedSessions }
+                , Lamdera.sendToFrontend clientId AdminLoginSuccess
+                )
 
             else
                 ( model, Lamdera.sendToFrontend clientId AdminLoginFailed )
+
+        AdminLogoutBackend ->
+            let
+                updatedSessions =
+                    Dict.remove sessionId model.authenticatedSessions
+            in
+            ( { model | authenticatedSessions = updatedSessions }
+            , Cmd.none
+            )
+
+        CheckAdminAuth ->
+            let
+                isAuthenticated =
+                    Dict.get sessionId model.authenticatedSessions
+                        |> Maybe.withDefault False
+            in
+            ( model, Lamdera.sendToFrontend clientId (AdminAuthStatus isAuthenticated) )
 
         GetGuestList ->
             let
@@ -110,6 +135,18 @@ updateFromFrontend _ clientId msg model =
             in
             ( { model | guests = updatedGuests }
             , Lamdera.sendToFrontend clientId GuestDeleted
+            )
+
+        GetCanvas ->
+            ( model, Lamdera.sendToFrontend clientId (CanvasUpdated model.canvas) )
+
+        PlacePixelOnCanvas x y color ->
+            let
+                updatedCanvas =
+                    Dict.insert ( x, y ) color model.canvas
+            in
+            ( { model | canvas = updatedCanvas }
+            , Lamdera.broadcast (PixelPlaced x y color)
             )
 
         NoOpToBackend ->

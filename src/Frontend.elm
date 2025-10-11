@@ -2,6 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Dict
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
@@ -48,8 +49,10 @@ init url key =
       , adminFormName = ""
       , adminFormEmail = ""
       , adminFormPlusOne = False
+      , canvas = Dict.empty
+      , selectedColor = "#FF0000"
       }
-    , Cmd.none
+    , Lamdera.sendToBackend CheckAdminAuth
     )
 
 
@@ -61,6 +64,9 @@ urlToRoute url =
 
         "/admin" ->
             AdminPage
+
+        "/canvas" ->
+            CanvasPage
 
         _ ->
             HomePage
@@ -82,7 +88,18 @@ update msg model =
                     )
 
         UrlChanged url ->
-            ( { model | route = urlToRoute url }, Cmd.none )
+            let
+                newRoute =
+                    urlToRoute url
+
+                cmd =
+                    if newRoute == CanvasPage then
+                        Lamdera.sendToBackend GetCanvas
+
+                    else
+                        Cmd.none
+            in
+            ( { model | route = newRoute }, cmd )
 
         UpdateRsvpName name ->
             ( { model | rsvpName = name }, Cmd.none )
@@ -186,6 +203,20 @@ update msg model =
         DeleteGuest email ->
             ( model, Lamdera.sendToBackend (DeleteGuestByEmail email) )
 
+        AdminAuthLoadedFromStorage _ ->
+            ( model, Cmd.none )
+
+        AdminLogout ->
+            ( { model | adminAuthenticated = False }
+            , Lamdera.sendToBackend AdminLogoutBackend
+            )
+
+        SelectColor color ->
+            ( { model | selectedColor = color }, Cmd.none )
+
+        PlacePixel x y ->
+            ( model, Lamdera.sendToBackend (PlacePixelOnCanvas x y model.selectedColor) )
+
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
@@ -211,6 +242,15 @@ updateFromBackend msg model =
         GuestDeleted ->
             ( model, Lamdera.sendToBackend GetGuestList )
 
+        AdminAuthStatus isAuthenticated ->
+            if isAuthenticated then
+                ( { model | adminAuthenticated = True }
+                , Lamdera.sendToBackend GetGuestList
+                )
+
+            else
+                ( model, Cmd.none )
+
         AdminLoginSuccess ->
             ( { model
                 | adminAuthenticated = True
@@ -227,6 +267,16 @@ updateFromBackend msg model =
               }
             , Cmd.none
             )
+
+        CanvasUpdated canvas ->
+            ( { model | canvas = canvas }, Cmd.none )
+
+        PixelPlaced x y color ->
+            let
+                updatedCanvas =
+                    Dict.insert ( x, y ) color model.canvas
+            in
+            ( { model | canvas = updatedCanvas }, Cmd.none )
 
         NoOpToFrontend ->
             ( model, Cmd.none )
@@ -256,13 +306,16 @@ view model =
 
                 AdminPage ->
                     adminPage model
+
+                CanvasPage ->
+                    canvasPage model
             ]
         ]
     }
 
 
-navigationBar : Route -> Html FrontendMsg
-navigationBar currentRoute =
+navigationBar : Route -> Bool -> Html FrontendMsg
+navigationBar currentRoute isAdminAuthenticated =
     Html.nav
         [ Attr.style "background" "white"
         , Attr.style "box-shadow" "0 2px 4px rgba(0,0,0,0.1)"
@@ -290,10 +343,17 @@ navigationBar currentRoute =
                 [ Attr.style "display" "flex"
                 , Attr.style "gap" "30px"
                 ]
-                [ navLink "/" "Home" (currentRoute == HomePage)
-                , navLink "/rsvp" "RSVP" (currentRoute == RsvpPage)
-                , navLink "/admin" "Admin" (currentRoute == AdminPage)
-                ]
+                ([ navLink "/" "Home" (currentRoute == HomePage)
+                 , navLink "/rsvp" "RSVP" (currentRoute == RsvpPage)
+                 , navLink "/canvas" "Canvas" (currentRoute == CanvasPage)
+                 ]
+                    ++ (if isAdminAuthenticated then
+                            [ navLink "/admin" "Admin" (currentRoute == AdminPage) ]
+
+                        else
+                            []
+                       )
+                )
             ]
         ]
 
@@ -335,7 +395,7 @@ homePage : Model -> String -> String -> Html FrontendMsg
 homePage model name1 name2 =
     Html.div []
         [ heroSection model name1 name2
-        , navigationBar model.route
+        , navigationBar model.route model.adminAuthenticated
         , detailsSection model
         , rsvpCallToAction model
         , footerSection
@@ -346,7 +406,7 @@ rsvpPage : Model -> String -> String -> Html FrontendMsg
 rsvpPage model name1 name2 =
     Html.div []
         [ heroSection model name1 name2
-        , navigationBar model.route
+        , navigationBar model.route model.adminAuthenticated
         , rsvpFormSection model
         , footerSection
         ]
@@ -361,20 +421,20 @@ heroSection _ name1 name2 =
         , Attr.style "color" "white"
         ]
         [ Html.h1
-            [ Attr.style "font-size" "3.5em"
+            [ Attr.style "font-size" "2.5em"
             , Attr.style "margin" "0"
             , Attr.style "font-weight" "400"
             , Attr.style "letter-spacing" "2px"
             ]
             [ Html.text name1 ]
         , Html.div
-            [ Attr.style "font-size" "2em"
+            [ Attr.style "font-size" "1.5em"
             , Attr.style "margin" "20px 0"
             , Attr.style "opacity" "0.9"
             ]
             [ Html.text "&" ]
         , Html.h1
-            [ Attr.style "font-size" "3.5em"
+            [ Attr.style "font-size" "2.5em"
             , Attr.style "margin" "0"
             , Attr.style "font-weight" "400"
             , Attr.style "letter-spacing" "2px"
@@ -776,15 +836,36 @@ adminPage model =
                 ]
                 [ Html.text "Manage your wedding guest list" ]
             ]
-        , navigationBar model.route
+        , navigationBar model.route model.adminAuthenticated
         , if model.adminAuthenticated then
-            Html.div
-                [ Attr.style "max-width" "1000px"
-                , Attr.style "margin" "40px auto"
-                , Attr.style "padding" "20px"
-                ]
-                [ adminGuestForm model
-                , adminGuestTable model
+            Html.div []
+                [ Html.div
+                    [ Attr.style "max-width" "1000px"
+                    , Attr.style "margin" "20px auto"
+                    , Attr.style "padding" "0 20px"
+                    , Attr.style "display" "flex"
+                    , Attr.style "justify-content" "flex-end"
+                    ]
+                    [ Html.button
+                        [ Events.onClick AdminLogout
+                        , Attr.style "background" "#dc3545"
+                        , Attr.style "color" "white"
+                        , Attr.style "border" "none"
+                        , Attr.style "padding" "10px 20px"
+                        , Attr.style "border-radius" "5px"
+                        , Attr.style "cursor" "pointer"
+                        , Attr.style "font-size" "0.9em"
+                        ]
+                        [ Html.text "Logout" ]
+                    ]
+                , Html.div
+                    [ Attr.style "max-width" "1000px"
+                    , Attr.style "margin" "20px auto"
+                    , Attr.style "padding" "20px"
+                    ]
+                    [ adminGuestForm model
+                    , adminGuestTable model
+                    ]
                 ]
 
           else
@@ -1129,3 +1210,152 @@ footerSection =
             ]
             [ Html.text "Looking forward to celebrating with you!" ]
         ]
+
+
+canvasPage : Model -> Html FrontendMsg
+canvasPage model =
+    Html.div []
+        [ Html.div
+            [ Attr.style "background" "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+            , Attr.style "color" "white"
+            , Attr.style "padding" "60px 20px"
+            , Attr.style "text-align" "center"
+            ]
+            [ Html.h1
+                [ Attr.style "font-size" "2.5em"
+                , Attr.style "margin" "0"
+                ]
+                [ Html.text "🎨 Collaborative Canvas" ]
+            , Html.p
+                [ Attr.style "margin-top" "10px"
+                , Attr.style "opacity" "0.9"
+                , Attr.style "font-size" "1.1em"
+                ]
+                [ Html.text "Draw together in real-time!" ]
+            ]
+        , navigationBar model.route model.adminAuthenticated
+        , Html.div
+            [ Attr.style "max-width" "1200px"
+            , Attr.style "margin" "40px auto"
+            , Attr.style "padding" "20px"
+            ]
+            [ colorPalette model.selectedColor
+            , canvasGrid model.canvas model.selectedColor
+            ]
+        , footerSection
+        ]
+
+
+colorPalette : String -> Html FrontendMsg
+colorPalette selectedColor =
+    let
+        colors =
+            [ "#FF0000"
+            , "#FFA500"
+            , "#FFFF00"
+            , "#00FF00"
+            , "#0000FF"
+            , "#4B0082"
+            , "#9400D3"
+            , "#FFFFFF"
+            , "#C0C0C0"
+            , "#808080"
+            , "#000000"
+            , "#FF69B4"
+            , "#00FFFF"
+            , "#FFD700"
+            , "#8B4513"
+            , "#FFC0CB"
+            ]
+    in
+    Html.div
+        [ Attr.style "background" "white"
+        , Attr.style "padding" "20px"
+        , Attr.style "border-radius" "10px"
+        , Attr.style "box-shadow" "0 4px 6px rgba(0,0,0,0.1)"
+        , Attr.style "margin-bottom" "20px"
+        ]
+        [ Html.h3
+            [ Attr.style "margin-top" "0"
+            , Attr.style "color" "#333"
+            ]
+            [ Html.text "Select Color" ]
+        , Html.div
+            [ Attr.style "display" "flex"
+            , Attr.style "gap" "10px"
+            , Attr.style "flex-wrap" "wrap"
+            ]
+            (List.map (colorButton selectedColor) colors)
+        ]
+
+
+colorButton : String -> String -> Html FrontendMsg
+colorButton selectedColor color =
+    Html.button
+        [ Events.onClick (SelectColor color)
+        , Attr.style "width" "50px"
+        , Attr.style "height" "50px"
+        , Attr.style "border-radius" "8px"
+        , Attr.style "border"
+            (if selectedColor == color then
+                "4px solid #667eea"
+
+             else
+                "2px solid #ddd"
+            )
+        , Attr.style "background-color" color
+        , Attr.style "cursor" "pointer"
+        , Attr.style "transition" "all 0.2s"
+        ]
+        []
+
+
+canvasGrid : Dict.Dict ( Int, Int ) String -> String -> Html FrontendMsg
+canvasGrid canvas _ =
+    let
+        gridSize =
+            50
+
+        pixelSize =
+            20
+    in
+    Html.div
+        [ Attr.style "background" "white"
+        , Attr.style "padding" "20px"
+        , Attr.style "border-radius" "10px"
+        , Attr.style "box-shadow" "0 4px 6px rgba(0,0,0,0.1)"
+        , Attr.style "display" "inline-block"
+        ]
+        [ Html.div
+            [ Attr.style "display" "grid"
+            , Attr.style "grid-template-columns" ("repeat(" ++ String.fromInt gridSize ++ ", " ++ String.fromInt pixelSize ++ "px)")
+            , Attr.style "gap" "1px"
+            , Attr.style "background-color" "#ddd"
+            , Attr.style "padding" "1px"
+            ]
+            (List.range 0 (gridSize - 1)
+                |> List.concatMap
+                    (\y ->
+                        List.range 0 (gridSize - 1)
+                            |> List.map (\x -> canvasPixel canvas x y pixelSize)
+                    )
+            )
+        ]
+
+
+canvasPixel : Dict.Dict ( Int, Int ) String -> Int -> Int -> Int -> Html FrontendMsg
+canvasPixel canvas x y pixelSize =
+    let
+        pixelColor =
+            Dict.get ( x, y ) canvas
+                |> Maybe.withDefault "#FFFFFF"
+    in
+    Html.div
+        [ Events.onClick (PlacePixel x y)
+        , Attr.style "width" (String.fromInt pixelSize ++ "px")
+        , Attr.style "height" (String.fromInt pixelSize ++ "px")
+        , Attr.style "background-color" pixelColor
+        , Attr.style "cursor" "pointer"
+        , Attr.style "transition" "background-color 0.1s"
+        ]
+        []
