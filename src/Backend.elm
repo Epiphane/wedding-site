@@ -1,6 +1,7 @@
 module Backend exposing (..)
 
 import Dict
+import Env
 import Lamdera exposing (ClientId, SessionId)
 import Types exposing (..)
 
@@ -14,15 +15,29 @@ app =
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \m -> Sub.none
+        , subscriptions = \_ -> Sub.none
         }
 
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { rsvps = Dict.empty }
+    ( { guests = initialGuestList
+      , rsvps = Dict.empty
+      }
     , Cmd.none
     )
+
+
+initialGuestList : Dict.Dict String Guest
+initialGuestList =
+    Dict.fromList
+        [ ( "thomas steinke"
+          , { name = "Thomas Steinke"
+            , email = "exyphnos@gmail.com"
+            , plusOne = True
+            }
+          )
+        ]
 
 
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
@@ -33,8 +48,23 @@ update msg model =
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
-updateFromFrontend sessionId clientId msg model =
+updateFromFrontend _ clientId msg model =
     case msg of
+        LookupGuestByName name ->
+            let
+                normalizedName =
+                    String.toLower (String.trim name)
+
+                maybeGuest =
+                    Dict.get normalizedName model.guests
+            in
+            case maybeGuest of
+                Just guest ->
+                    ( model, Lamdera.sendToFrontend clientId (GuestFound guest) )
+
+                Nothing ->
+                    ( model, Lamdera.sendToFrontend clientId GuestNotFoundResponse )
+
         SubmitRsvpToBackend rsvp ->
             let
                 updatedRsvps =
@@ -45,6 +75,41 @@ updateFromFrontend sessionId clientId msg model =
             in
             ( { model | rsvps = updatedRsvps }
             , Lamdera.sendToFrontend clientId (RsvpSubmitted rsvpCount)
+            )
+
+        AdminLogin password ->
+            if password == Env.adminPassword then
+                ( model, Lamdera.sendToFrontend clientId AdminLoginSuccess )
+
+            else
+                ( model, Lamdera.sendToFrontend clientId AdminLoginFailed )
+
+        GetGuestList ->
+            let
+                guestList =
+                    Dict.values model.guests
+            in
+            ( model, Lamdera.sendToFrontend clientId (GuestListReceived guestList) )
+
+        AddOrUpdateGuest guest ->
+            let
+                normalizedName =
+                    String.toLower (String.trim guest.name)
+
+                updatedGuests =
+                    Dict.insert normalizedName guest model.guests
+            in
+            ( { model | guests = updatedGuests }
+            , Lamdera.sendToFrontend clientId GuestSaved
+            )
+
+        DeleteGuestByEmail email ->
+            let
+                updatedGuests =
+                    Dict.filter (\_ guest -> guest.email /= email) model.guests
+            in
+            ( { model | guests = updatedGuests }
+            , Lamdera.sendToFrontend clientId GuestDeleted
             )
 
         NoOpToBackend ->

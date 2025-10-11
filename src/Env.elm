@@ -6,3 +6,8 @@ module Env exposing (..)
 
 dummyConfigItem =
     ""
+
+
+adminPassword : String
+adminPassword =
+    "wedding2026"
