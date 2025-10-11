@@ -2,32 +2,59 @@ module Types exposing (..)
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
+import Dict exposing (Dict)
 import Url exposing (Url)
+
+
+type alias RsvpResponse =
+    { name : String
+    , email : String
+    , attending : AttendanceStatus
+    }
+
+
+type AttendanceStatus
+    = Attending
+    | NotAttending
+
+
+type Route
+    = HomePage
+    | RsvpPage
 
 
 type alias FrontendModel =
     { key : Key
+    , route : Route
     , coupleNames : ( String, String )
     , weddingDate : String
     , venue : String
-    , showRsvpForm : Bool
+    , rsvpName : String
+    , rsvpEmail : String
+    , rsvpAttending : AttendanceStatus
+    , rsvpSubmitted : Bool
+    , rsvpCount : Int
     }
 
 
 type alias BackendModel =
-    { message : String
+    { rsvps : Dict String RsvpResponse
     }
 
 
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
-    | ToggleRsvpForm
+    | UpdateRsvpName String
+    | UpdateRsvpEmail String
+    | UpdateRsvpAttending AttendanceStatus
+    | SubmitRsvp
     | NoOpFrontendMsg
 
 
 type ToBackend
-    = NoOpToBackend
+    = SubmitRsvpToBackend RsvpResponse
+    | NoOpToBackend
 
 
 type BackendMsg
@@ -35,4 +62,5 @@ type BackendMsg
 
 
 type ToFrontend
-    = NoOpToFrontend
+    = RsvpSubmitted Int
+    | NoOpToFrontend

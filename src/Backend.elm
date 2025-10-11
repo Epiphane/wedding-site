@@ -1,5 +1,6 @@
 module Backend exposing (..)
 
+import Dict
 import Lamdera exposing (ClientId, SessionId)
 import Types exposing (..)
 
@@ -19,7 +20,7 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { message = "Hello!" }
+    ( { rsvps = Dict.empty }
     , Cmd.none
     )
 
@@ -34,5 +35,17 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
+        SubmitRsvpToBackend rsvp ->
+            let
+                updatedRsvps =
+                    Dict.insert rsvp.email rsvp model.rsvps
+
+                rsvpCount =
+                    Dict.size updatedRsvps
+            in
+            ( { model | rsvps = updatedRsvps }
+            , Lamdera.sendToFrontend clientId (RsvpSubmitted rsvpCount)
+            )
+
         NoOpToBackend ->
             ( model, Cmd.none )

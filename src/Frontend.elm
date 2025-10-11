@@ -29,13 +29,28 @@ app =
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
+      , route = urlToRoute url
       , coupleNames = ( "Your Name", "Partner Name" )
       , weddingDate = "June 15, 2026"
       , venue = "The Grand Ballroom"
-      , showRsvpForm = False
+      , rsvpName = ""
+      , rsvpEmail = ""
+      , rsvpAttending = Attending
+      , rsvpSubmitted = False
+      , rsvpCount = 0
       }
     , Cmd.none
     )
+
+
+urlToRoute : Url.Url -> Route
+urlToRoute url =
+    case url.path of
+        "/rsvp" ->
+            RsvpPage
+
+        _ ->
+            HomePage
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
@@ -54,10 +69,28 @@ update msg model =
                     )
 
         UrlChanged url ->
-            ( model, Cmd.none )
+            ( { model | route = urlToRoute url }, Cmd.none )
 
-        ToggleRsvpForm ->
-            ( { model | showRsvpForm = not model.showRsvpForm }, Cmd.none )
+        UpdateRsvpName name ->
+            ( { model | rsvpName = name }, Cmd.none )
+
+        UpdateRsvpEmail email ->
+            ( { model | rsvpEmail = email }, Cmd.none )
+
+        UpdateRsvpAttending status ->
+            ( { model | rsvpAttending = status }, Cmd.none )
+
+        SubmitRsvp ->
+            let
+                rsvp =
+                    { name = model.rsvpName
+                    , email = model.rsvpEmail
+                    , attending = model.rsvpAttending
+                    }
+            in
+            ( { model | rsvpSubmitted = True }
+            , Lamdera.sendToBackend (SubmitRsvpToBackend rsvp)
+            )
 
         NoOpFrontendMsg ->
             ( model, Cmd.none )
@@ -66,6 +99,9 @@ update msg model =
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
+        RsvpSubmitted count ->
+            ( { model | rsvpCount = count }, Cmd.none )
+
         NoOpToFrontend ->
             ( model, Cmd.none )
 
@@ -85,13 +121,49 @@ view model =
             , Attr.style "min-height" "100vh"
             , Attr.style "background" "linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)"
             ]
-            [ heroSection model name1 name2
-            , detailsSection model
-            , rsvpSection model
-            , footerSection
+            [ case model.route of
+                HomePage ->
+                    homePage model name1 name2
+
+                RsvpPage ->
+                    rsvpPage model name1 name2
             ]
         ]
     }
+
+
+homePage : Model -> String -> String -> Html FrontendMsg
+homePage model name1 name2 =
+    Html.div []
+        [ heroSection model name1 name2
+        , detailsSection model
+        , rsvpCallToAction model
+        , footerSection
+        ]
+
+
+rsvpPage : Model -> String -> String -> Html FrontendMsg
+rsvpPage model name1 name2 =
+    Html.div []
+        [ heroSection model name1 name2
+        , Html.div
+            [ Attr.style "max-width" "600px"
+            , Attr.style "margin" "40px auto"
+            , Attr.style "padding" "20px"
+            ]
+            [ Html.a
+                [ Attr.href "/"
+                , Attr.style "color" "#667eea"
+                , Attr.style "text-decoration" "none"
+                , Attr.style "display" "inline-block"
+                , Attr.style "margin-bottom" "20px"
+                , Attr.style "font-size" "1.1em"
+                ]
+                [ Html.text "← Back to Home" ]
+            ]
+        , rsvpFormSection model
+        , footerSection
+        ]
 
 
 heroSection : Model -> String -> String -> Html FrontendMsg
@@ -190,8 +262,8 @@ detailCard emoji title content =
         ]
 
 
-rsvpSection : Model -> Html FrontendMsg
-rsvpSection model =
+rsvpCallToAction : Model -> Html FrontendMsg
+rsvpCallToAction _ =
     Html.div
         [ Attr.style "background" "white"
         , Attr.style "padding" "60px 20px"
@@ -210,8 +282,8 @@ rsvpSection model =
             , Attr.style "margin-bottom" "30px"
             ]
             [ Html.text "We'd love to celebrate with you!" ]
-        , Html.button
-            [ Events.onClick ToggleRsvpForm
+        , Html.a
+            [ Attr.href "/rsvp"
             , Attr.style "background" "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
             , Attr.style "color" "white"
             , Attr.style "border" "none"
@@ -220,32 +292,58 @@ rsvpSection model =
             , Attr.style "border-radius" "30px"
             , Attr.style "cursor" "pointer"
             , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
-            , Attr.style "transition" "transform 0.2s"
+            , Attr.style "text-decoration" "none"
+            , Attr.style "display" "inline-block"
             ]
-            [ Html.text
-                (if model.showRsvpForm then
-                    "Hide RSVP Form"
-
-                 else
-                    "RSVP Now"
-                )
-            ]
-        , if model.showRsvpForm then
-            rsvpForm
-
-          else
-            Html.text ""
+            [ Html.text "RSVP Now" ]
         ]
 
 
-rsvpForm : Html FrontendMsg
-rsvpForm =
+rsvpFormSection : Model -> Html FrontendMsg
+rsvpFormSection model =
+    Html.div
+        [ Attr.style "background" "white"
+        , Attr.style "padding" "60px 20px"
+        , Attr.style "text-align" "center"
+        ]
+        [ Html.h2
+            [ Attr.style "font-size" "2.5em"
+            , Attr.style "margin-bottom" "20px"
+            , Attr.style "color" "#333"
+            , Attr.style "font-weight" "400"
+            ]
+            [ Html.text "RSVP" ]
+        , Html.p
+            [ Attr.style "color" "#666"
+            , Attr.style "font-size" "1.2em"
+            , Attr.style "margin-bottom" "30px"
+            ]
+            [ Html.text "We'd love to celebrate with you!" ]
+        , rsvpForm model
+        ]
+
+
+rsvpForm : Model -> Html FrontendMsg
+rsvpForm model =
     Html.div
         [ Attr.style "max-width" "500px"
         , Attr.style "margin" "30px auto"
         , Attr.style "text-align" "left"
         ]
-        [ Html.div
+        [ if model.rsvpSubmitted then
+            Html.div
+                [ Attr.style "background" "#d4edda"
+                , Attr.style "color" "#155724"
+                , Attr.style "padding" "15px"
+                , Attr.style "border-radius" "5px"
+                , Attr.style "margin-bottom" "20px"
+                , Attr.style "text-align" "center"
+                ]
+                [ Html.text ("Thank you! Your RSVP has been received. Total RSVPs: " ++ String.fromInt model.rsvpCount) ]
+
+          else
+            Html.text ""
+        , Html.div
             [ Attr.style "margin-bottom" "20px" ]
             [ Html.label
                 [ Attr.style "display" "block"
@@ -255,6 +353,8 @@ rsvpForm =
                 [ Html.text "Your Name" ]
             , Html.input
                 [ Attr.type_ "text"
+                , Attr.value model.rsvpName
+                , Events.onInput UpdateRsvpName
                 , Attr.style "width" "100%"
                 , Attr.style "padding" "10px"
                 , Attr.style "border" "1px solid #ddd"
@@ -274,6 +374,8 @@ rsvpForm =
                 [ Html.text "Email" ]
             , Html.input
                 [ Attr.type_ "email"
+                , Attr.value model.rsvpEmail
+                , Events.onInput UpdateRsvpEmail
                 , Attr.style "width" "100%"
                 , Attr.style "padding" "10px"
                 , Attr.style "border" "1px solid #ddd"
@@ -292,28 +394,57 @@ rsvpForm =
                 ]
                 [ Html.text "Will you attend?" ]
             , Html.select
-                [ Attr.style "width" "100%"
+                [ Events.onInput
+                    (\val ->
+                        if val == "attending" then
+                            UpdateRsvpAttending Attending
+
+                        else
+                            UpdateRsvpAttending NotAttending
+                    )
+                , Attr.style "width" "100%"
                 , Attr.style "padding" "10px"
                 , Attr.style "border" "1px solid #ddd"
                 , Attr.style "border-radius" "5px"
                 , Attr.style "font-size" "1em"
                 , Attr.style "box-sizing" "border-box"
                 ]
-                [ Html.option [] [ Html.text "Yes, I'll be there!" ]
-                , Html.option [] [ Html.text "Sorry, can't make it" ]
+                [ Html.option [ Attr.value "attending" ] [ Html.text "Yes, I'll be there!" ]
+                , Html.option [ Attr.value "not-attending" ] [ Html.text "Sorry, can't make it" ]
                 ]
             ]
         , Html.button
-            [ Attr.style "background" "#667eea"
+            [ Events.onClick SubmitRsvp
+            , Attr.disabled model.rsvpSubmitted
+            , Attr.style "background"
+                (if model.rsvpSubmitted then
+                    "#ccc"
+
+                 else
+                    "#667eea"
+                )
             , Attr.style "color" "white"
             , Attr.style "border" "none"
             , Attr.style "padding" "12px 30px"
             , Attr.style "font-size" "1.1em"
             , Attr.style "border-radius" "5px"
-            , Attr.style "cursor" "pointer"
+            , Attr.style "cursor"
+                (if model.rsvpSubmitted then
+                    "not-allowed"
+
+                 else
+                    "pointer"
+                )
             , Attr.style "width" "100%"
             ]
-            [ Html.text "Submit RSVP" ]
+            [ Html.text
+                (if model.rsvpSubmitted then
+                    "RSVP Submitted"
+
+                 else
+                    "Submit RSVP"
+                )
+            ]
         ]
 
 
