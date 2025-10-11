@@ -10,4 +10,4 @@ dummyConfigItem =
 
 adminPassword : String
 adminPassword =
-    "wedding2026"
+    "thomas"
