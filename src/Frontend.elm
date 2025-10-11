@@ -62,6 +62,12 @@ urlToRoute url =
         "/rsvp" ->
             RsvpPage
 
+        "/travel" ->
+            TravelPage
+
+        "/schedule" ->
+            SchedulePage
+
         "/admin" ->
             AdminPage
 
@@ -304,6 +310,12 @@ view model =
                 RsvpPage ->
                     rsvpPage model name1 name2
 
+                TravelPage ->
+                    travelPage model name1 name2
+
+                SchedulePage ->
+                    schedulePage model name1 name2
+
                 AdminPage ->
                     adminPage model
 
@@ -330,8 +342,9 @@ navigationBar currentRoute isAdminAuthenticated =
             , Attr.style "flex-wrap" "wrap"
             ]
             ([ navLink "/" "Home" (currentRoute == HomePage)
+             , navLink "/travel" "Travel" (currentRoute == TravelPage)
+             , navLink "/schedule" "Schedule" (currentRoute == SchedulePage)
              , navLink "/rsvp" "RSVP" (currentRoute == RsvpPage)
-             , navLink "/canvas" "Canvas" (currentRoute == CanvasPage)
              ]
                 ++ (if isAdminAuthenticated then
                         [ navLink "/admin" "Admin" (currentRoute == AdminPage) ]
@@ -339,6 +352,7 @@ navigationBar currentRoute isAdminAuthenticated =
                     else
                         []
                    )
+                ++ [ navLink "/canvas" "Canvas" (currentRoute == CanvasPage) ]
             )
         ]
 
@@ -385,6 +399,28 @@ rsvpPage model name1 name2 =
         , coupleNamesHeader name1 name2
         , navigationBar model.route model.adminAuthenticated
         , rsvpFormSection model
+        , footerSection
+        ]
+
+
+travelPage : Model -> String -> String -> Html FrontendMsg
+travelPage model name1 name2 =
+    Html.div []
+        [ dateLocationHeader model
+        , coupleNamesHeader name1 name2
+        , navigationBar model.route model.adminAuthenticated
+        , travelInfoSection
+        , footerSection
+        ]
+
+
+schedulePage : Model -> String -> String -> Html FrontendMsg
+schedulePage model name1 name2 =
+    Html.div []
+        [ dateLocationHeader model
+        , coupleNamesHeader name1 name2
+        , navigationBar model.route model.adminAuthenticated
+        , scheduleInfoSection model
         , footerSection
         ]
 
@@ -1237,6 +1273,203 @@ adminGuestRow guest =
                 ]
                 [ Html.text "Delete" ]
             ]
+        ]
+
+
+travelInfoSection : Html FrontendMsg
+travelInfoSection =
+    Html.div
+        [ Attr.style "background" "white"
+        , Attr.style "padding" "80px 20px"
+        ]
+        [ Html.div
+            [ Attr.style "max-width" "800px"
+            , Attr.style "margin" "0 auto"
+            ]
+            [ Html.h2
+                [ Attr.style "font-size" "2em"
+                , Attr.style "margin-bottom" "40px"
+                , Attr.style "color" "#333"
+                , Attr.style "font-weight" "400"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                , Attr.style "text-align" "center"
+                ]
+                [ Html.text "Travel Information" ]
+            , card
+                [ Attr.style "margin-bottom" "30px" ]
+                [ Html.h3
+                    [ Attr.style "margin-top" "0"
+                    , Attr.style "color" "#333"
+                    , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                    , Attr.style "font-size" "1.5em"
+                    ]
+                    [ Html.text "Accommodations" ]
+                , Html.p
+                    [ Attr.style "color" "#666"
+                    , Attr.style "line-height" "1.6"
+                    , Attr.style "margin-bottom" "15px"
+                    ]
+                    [ Html.text "We recommend staying in Santa Cruz, which offers a variety of hotels and vacation rentals within easy reach of the venue." ]
+                , Html.div
+                    [ Attr.style "margin-top" "20px" ]
+                    [ Html.h4
+                        [ Attr.style "color" "#333"
+                        , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                        , Attr.style "margin-bottom" "10px"
+                        ]
+                        [ Html.text "Suggested Hotels:" ]
+                    , Html.ul
+                        [ Attr.style "color" "#666"
+                        , Attr.style "line-height" "1.8"
+                        ]
+                        [ Html.li [] [ Html.text "Dream Inn Santa Cruz - Beachfront hotel with ocean views" ]
+                        , Html.li [] [ Html.text "Hotel Paradox - Boutique hotel in downtown Santa Cruz" ]
+                        , Html.li [] [ Html.text "West Cliff Inn - Victorian inn near the beach" ]
+                        , Html.li [] [ Html.text "Mission Inn - Budget-friendly option near downtown" ]
+                        ]
+                    ]
+                ]
+            , card
+                [ Attr.style "margin-bottom" "30px" ]
+                [ Html.h3
+                    [ Attr.style "margin-top" "0"
+                    , Attr.style "color" "#333"
+                    , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                    , Attr.style "font-size" "1.5em"
+                    ]
+                    [ Html.text "Getting to the Reception" ]
+                , Html.p
+                    [ Attr.style "color" "#666"
+                    , Attr.style "line-height" "1.6"
+                    , Attr.style "margin-bottom" "15px"
+                    ]
+                    [ Html.text "The Ampitheatre of the Redwoods is located in the Santa Cruz Mountains. We will provide shuttle service from downtown Santa Cruz." ]
+                , Html.div
+                    [ Attr.style "background" "#f8f9fa"
+                    , Attr.style "padding" "20px"
+                    , Attr.style "border-radius" "2px"
+                    , Attr.style "margin-top" "20px"
+                    ]
+                    [ Html.h4
+                        [ Attr.style "color" "#333"
+                        , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                        , Attr.style "margin-top" "0"
+                        , Attr.style "margin-bottom" "10px"
+                        ]
+                        [ Html.text "Shuttle Details:" ]
+                    , Html.ul
+                        [ Attr.style "color" "#666"
+                        , Attr.style "line-height" "1.8"
+                        , Attr.style "margin" "0"
+                        , Attr.style "padding-left" "20px"
+                        ]
+                        [ Html.li [] [ Html.text "Pickup Location: Downtown Santa Cruz (specific location TBD)" ]
+                        , Html.li [] [ Html.text "Departure Time: 3:00 PM" ]
+                        , Html.li [] [ Html.text "Return Shuttle: Departing venue at 10:00 PM" ]
+                        , Html.li [] [ Html.text "Please RSVP to reserve your spot on the shuttle" ]
+                        ]
+                    ]
+                ]
+            , card
+                []
+                [ Html.h3
+                    [ Attr.style "margin-top" "0"
+                    , Attr.style "color" "#333"
+                    , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                    , Attr.style "font-size" "1.5em"
+                    ]
+                    [ Html.text "Driving Directions" ]
+                , Html.p
+                    [ Attr.style "color" "#666"
+                    , Attr.style "line-height" "1.6"
+                    ]
+                    [ Html.text "If you prefer to drive yourself, the venue is approximately 20 minutes from downtown Santa Cruz via Highway 9. Parking is available on-site. Please note that the mountain roads can be winding, so allow extra time for your journey." ]
+                ]
+            ]
+        ]
+
+
+scheduleInfoSection : Model -> Html FrontendMsg
+scheduleInfoSection model =
+    Html.div
+        [ Attr.style "background" "white"
+        , Attr.style "padding" "80px 20px"
+        ]
+        [ Html.div
+            [ Attr.style "max-width" "800px"
+            , Attr.style "margin" "0 auto"
+            ]
+            [ Html.h2
+                [ Attr.style "font-size" "2em"
+                , Attr.style "margin-bottom" "40px"
+                , Attr.style "color" "#333"
+                , Attr.style "font-weight" "400"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                , Attr.style "text-align" "center"
+                ]
+                [ Html.text "Wedding Schedule" ]
+            , scheduleEvent "Friday, August 21, 2026" "Welcome Dinner" "7:00 PM" "Downtown Santa Cruz" "Join us for a casual welcome dinner the night before the wedding. Location details will be provided closer to the date."
+            , scheduleEvent model.weddingDate "Ceremony" "4:00 PM" model.venue "Our wedding ceremony will take place in the beautiful natural setting of the Ampitheatre of the Redwoods."
+            , scheduleEvent model.weddingDate "Cocktail Hour" "4:30 PM" model.venue "Enjoy drinks and appetizers while we take photos."
+            , scheduleEvent model.weddingDate "Reception" "6:00 PM" model.venue "Dinner, dancing, and celebration under the redwoods!"
+            , scheduleEvent model.weddingDate "Shuttle Return" "10:00 PM" model.venue "Last shuttle departs back to Santa Cruz."
+            ]
+        ]
+
+
+scheduleEvent : String -> String -> String -> String -> String -> Html FrontendMsg
+scheduleEvent date title time location description =
+    card
+        [ Attr.style "margin-bottom" "20px" ]
+        [ Html.div
+            [ Attr.style "display" "flex"
+            , Attr.style "justify-content" "space-between"
+            , Attr.style "align-items" "flex-start"
+            , Attr.style "flex-wrap" "wrap"
+            , Attr.style "gap" "20px"
+            ]
+            [ Html.div
+                [ Attr.style "flex" "1"
+                , Attr.style "min-width" "250px"
+                ]
+                [ Html.h3
+                    [ Attr.style "margin-top" "0"
+                    , Attr.style "margin-bottom" "5px"
+                    , Attr.style "color" "#333"
+                    , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                    , Attr.style "font-size" "1.3em"
+                    ]
+                    [ Html.text title ]
+                , Html.p
+                    [ Attr.style "color" "#999"
+                    , Attr.style "margin" "0"
+                    , Attr.style "font-size" "0.9em"
+                    ]
+                    [ Html.text date ]
+                ]
+            , Html.div
+                [ Attr.style "text-align" "right"
+                , Attr.style "min-width" "150px"
+                ]
+                [ Html.div
+                    [ Attr.style "color" "#333"
+                    , Attr.style "font-weight" "bold"
+                    , Attr.style "margin-bottom" "5px"
+                    ]
+                    [ Html.text time ]
+                , Html.div
+                    [ Attr.style "color" "#666"
+                    , Attr.style "font-size" "0.9em"
+                    ]
+                    [ Html.text location ]
+                ]
+            ]
+        , Html.p
+            [ Attr.style "color" "#666"
+            , Attr.style "line-height" "1.6"
+            , Attr.style "margin" "15px 0 0 0"
+            ]
+            [ Html.text description ]
         ]
 
 

@@ -37,6 +37,8 @@ type RsvpStep
 type Route
     = HomePage
     | RsvpPage
+    | TravelPage
+    | SchedulePage
     | AdminPage
     | CanvasPage
 
