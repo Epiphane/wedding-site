@@ -43,6 +43,21 @@ type Route
     | CanvasPage
 
 
+type CanvasItemType
+    = Sticker String
+    | TextBox String
+
+
+type alias CanvasItem =
+    { id : String
+    , itemType : CanvasItemType
+    , x : Float
+    , y : Float
+    , rotation : Float
+    , scale : Float
+    }
+
+
 type alias FrontendModel =
     { key : Key
     , route : Route
@@ -64,8 +79,12 @@ type alias FrontendModel =
     , adminFormName : String
     , adminFormEmail : String
     , adminFormPlusOne : Bool
-    , canvas : Dict ( Int, Int ) String
-    , selectedColor : String
+    , canvasItems : List CanvasItem
+    , selectedSticker : String
+    , textInput : String
+    , stickerRotation : Float
+    , stickerScale : Float
+    , draggingItemId : Maybe String
     }
 
 
@@ -73,7 +92,7 @@ type alias BackendModel =
     { guests : Dict String Guest
     , rsvps : Dict String RsvpResponse
     , authenticatedSessions : Dict SessionId Bool
-    , canvas : Dict ( Int, Int ) String
+    , canvasItems : List CanvasItem
     }
 
 
@@ -98,8 +117,14 @@ type FrontendMsg
     | CancelEditGuest
     | SaveGuest
     | DeleteGuest String
-    | SelectColor String
-    | PlacePixel Int Int
+    | SelectSticker String
+    | UpdateTextInput String
+    | UpdateRotation Float
+    | UpdateScale Float
+    | PlaceItemOnCanvas Float Float
+    | StartDragging String
+    | StopDragging
+    | DragItem Float Float
     | NoOpFrontendMsg
 
 
@@ -112,8 +137,9 @@ type ToBackend
     | GetGuestList
     | AddOrUpdateGuest Guest
     | DeleteGuestByEmail String
-    | PlacePixelOnCanvas Int Int String
-    | GetCanvas
+    | PlaceCanvasItem CanvasItem
+    | UpdateCanvasItemPosition String Float Float
+    | GetCanvasItems
     | NoOpToBackend
 
 
@@ -131,6 +157,7 @@ type ToFrontend
     | GuestListReceived (List Guest)
     | GuestSaved
     | GuestDeleted
-    | CanvasUpdated (Dict ( Int, Int ) String)
-    | PixelPlaced Int Int String
+    | CanvasItemsReceived (List CanvasItem)
+    | CanvasItemPlaced CanvasItem
+    | CanvasItemMoved String Float Float
     | NoOpToFrontend

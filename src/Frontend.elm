@@ -2,10 +2,10 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Dict
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
+import Json.Decode as Decode
 import Lamdera
 import Types exposing (..)
 import Url
@@ -49,8 +49,12 @@ init url key =
       , adminFormName = ""
       , adminFormEmail = ""
       , adminFormPlusOne = False
-      , canvas = Dict.empty
-      , selectedColor = "#FF0000"
+      , canvasItems = []
+      , selectedSticker = "❤️"
+      , textInput = ""
+      , stickerRotation = 0
+      , stickerScale = 1.0
+      , draggingItemId = Nothing
       }
     , Lamdera.sendToBackend CheckAdminAuth
     )
@@ -100,7 +104,7 @@ update msg model =
 
                 cmd =
                     if newRoute == CanvasPage then
-                        Lamdera.sendToBackend GetCanvas
+                        Lamdera.sendToBackend GetCanvasItems
 
                     else
                         Cmd.none
@@ -217,11 +221,70 @@ update msg model =
             , Lamdera.sendToBackend AdminLogoutBackend
             )
 
-        SelectColor color ->
-            ( { model | selectedColor = color }, Cmd.none )
+        SelectSticker sticker ->
+            ( { model | selectedSticker = sticker }, Cmd.none )
 
-        PlacePixel x y ->
-            ( model, Lamdera.sendToBackend (PlacePixelOnCanvas x y model.selectedColor) )
+        UpdateTextInput text ->
+            ( { model | textInput = String.left 140 text }, Cmd.none )
+
+        UpdateRotation rotation ->
+            ( { model | stickerRotation = rotation }, Cmd.none )
+
+        UpdateScale scale ->
+            ( { model | stickerScale = clamp 0.5 2.0 scale }, Cmd.none )
+
+        PlaceItemOnCanvas x y ->
+            let
+                item =
+                    if model.textInput /= "" then
+                        { id = String.fromInt (List.length model.canvasItems)
+                        , itemType = TextBox model.textInput
+                        , x = x
+                        , y = y
+                        , rotation = model.stickerRotation
+                        , scale = model.stickerScale
+                        }
+
+                    else
+                        { id = String.fromInt (List.length model.canvasItems)
+                        , itemType = Sticker model.selectedSticker
+                        , x = x
+                        , y = y
+                        , rotation = model.stickerRotation
+                        , scale = model.stickerScale
+                        }
+            in
+            ( { model | textInput = "", stickerRotation = 0, stickerScale = 1.0 }
+            , Lamdera.sendToBackend (PlaceCanvasItem item)
+            )
+
+        StartDragging itemId ->
+            ( { model | draggingItemId = Just itemId }, Cmd.none )
+
+        StopDragging ->
+            ( { model | draggingItemId = Nothing }, Cmd.none )
+
+        DragItem x y ->
+            case model.draggingItemId of
+                Just itemId ->
+                    let
+                        updatedItems =
+                            List.map
+                                (\item ->
+                                    if item.id == itemId then
+                                        { item | x = x, y = y }
+
+                                    else
+                                        item
+                                )
+                                model.canvasItems
+                    in
+                    ( { model | canvasItems = updatedItems }
+                    , Lamdera.sendToBackend (UpdateCanvasItemPosition itemId x y)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         NoOpFrontendMsg ->
             ( model, Cmd.none )
@@ -274,15 +337,26 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
-        CanvasUpdated canvas ->
-            ( { model | canvas = canvas }, Cmd.none )
+        CanvasItemsReceived items ->
+            ( { model | canvasItems = items }, Cmd.none )
 
-        PixelPlaced x y color ->
+        CanvasItemPlaced item ->
+            ( { model | canvasItems = item :: model.canvasItems }, Cmd.none )
+
+        CanvasItemMoved itemId x y ->
             let
-                updatedCanvas =
-                    Dict.insert ( x, y ) color model.canvas
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | x = x, y = y }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
             in
-            ( { model | canvas = updatedCanvas }, Cmd.none )
+            ( { model | canvasItems = updatedItems }, Cmd.none )
 
         NoOpToFrontend ->
             ( model, Cmd.none )
@@ -1500,122 +1574,276 @@ canvasPage model =
         , coupleNamesHeader name1 name2
         , navigationBar model.route model.adminAuthenticated
         , Html.div
-            [ Attr.style "max-width" "1200px"
+            [ Attr.style "max-width" "1400px"
             , Attr.style "margin" "40px auto"
             , Attr.style "padding" "20px"
             ]
-            [ colorPalette model.selectedColor
-            , canvasGrid model.canvas model.selectedColor
+            [ Html.div
+                [ Attr.style "display" "grid"
+                , Attr.style "grid-template-columns" "300px 1fr"
+                , Attr.style "gap" "20px"
+                , Attr.style "align-items" "start"
+                ]
+                [ canvasControls model
+                , freeformCanvas model
+                ]
             ]
         , footerSection
         ]
 
 
-colorPalette : String -> Html FrontendMsg
-colorPalette selectedColor =
-    let
-        colors =
-            [ "#FF0000"
-            , "#FFA500"
-            , "#FFFF00"
-            , "#00FF00"
-            , "#0000FF"
-            , "#4B0082"
-            , "#9400D3"
-            , "#FFFFFF"
-            , "#C0C0C0"
-            , "#808080"
-            , "#000000"
-            , "#FF69B4"
-            , "#00FFFF"
-            , "#FFD700"
-            , "#8B4513"
-            , "#FFC0CB"
+canvasControls : Model -> Html FrontendMsg
+canvasControls model =
+    Html.div []
+        [ card
+            [ Attr.style "margin-bottom" "20px" ]
+            [ Html.h3
+                [ Attr.style "margin-top" "0"
+                , Attr.style "color" "#333"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                ]
+                [ Html.text "Add Sticker" ]
+            , Html.div
+                [ Attr.style "display" "grid"
+                , Attr.style "grid-template-columns" "repeat(4, 1fr)"
+                , Attr.style "gap" "10px"
+                ]
+                (List.map (stickerButton model.selectedSticker)
+                    [ "❤️"
+                    , "💕"
+                    , "💝"
+                    , "💖"
+                    , "💗"
+                    , "💓"
+                    , "💞"
+                    , "💘"
+                    , "🎉"
+                    , "🎊"
+                    , "🎈"
+                    , "🎁"
+                    , "🌸"
+                    , "🌹"
+                    , "🌺"
+                    , "🌻"
+                    , "⭐"
+                    , "✨"
+                    , "💫"
+                    , "🌟"
+                    , "👰"
+                    , "🤵"
+                    , "💍"
+                    , "🥂"
+                    ]
+                )
             ]
-    in
-    card
-        [ Attr.style "padding" "20px"
-        , Attr.style "margin-bottom" "20px"
-        ]
-        [ Html.h3
-            [ Attr.style "margin-top" "0"
-            , Attr.style "color" "#333"
-            , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+        , card
+            [ Attr.style "margin-bottom" "20px" ]
+            [ Html.h3
+                [ Attr.style "margin-top" "0"
+                , Attr.style "color" "#333"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                ]
+                [ Html.text "Add Text" ]
+            , Html.textarea
+                [ Attr.value model.textInput
+                , Events.onInput UpdateTextInput
+                , Attr.placeholder "Enter text (max 140 characters)"
+                , Attr.style "width" "100%"
+                , Attr.style "padding" "10px"
+                , Attr.style "border" "1px solid #ddd"
+                , Attr.style "border-radius" "2px"
+                , Attr.style "font-size" "1em"
+                , Attr.style "box-sizing" "border-box"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                , Attr.style "resize" "vertical"
+                , Attr.style "min-height" "80px"
+                ]
+                []
+            , Html.p
+                [ Attr.style "margin" "5px 0 0 0"
+                , Attr.style "font-size" "0.85em"
+                , Attr.style "color" "#999"
+                , Attr.style "text-align" "right"
+                ]
+                [ Html.text (String.fromInt (String.length model.textInput) ++ " / 140") ]
             ]
-            [ Html.text "Select Color" ]
-        , Html.div
-            [ Attr.style "display" "flex"
-            , Attr.style "gap" "10px"
-            , Attr.style "flex-wrap" "wrap"
+        , card
+            []
+            [ Html.h3
+                [ Attr.style "margin-top" "0"
+                , Attr.style "color" "#333"
+                , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+                ]
+                [ Html.text "Customize" ]
+            , Html.div
+                [ Attr.style "margin-bottom" "15px" ]
+                [ Html.label
+                    [ Attr.style "display" "block"
+                    , Attr.style "margin-bottom" "5px"
+                    , Attr.style "color" "#666"
+                    ]
+                    [ Html.text ("Rotation: " ++ String.fromInt (round model.stickerRotation) ++ "°") ]
+                , Html.input
+                    [ Attr.type_ "range"
+                    , Attr.min "0"
+                    , Attr.max "360"
+                    , Attr.value (String.fromFloat model.stickerRotation)
+                    , Events.onInput (\v -> UpdateRotation (Maybe.withDefault 0 (String.toFloat v)))
+                    , Attr.style "width" "100%"
+                    ]
+                    []
+                ]
+            , Html.div
+                []
+                [ Html.label
+                    [ Attr.style "display" "block"
+                    , Attr.style "margin-bottom" "5px"
+                    , Attr.style "color" "#666"
+                    ]
+                    [ Html.text ("Scale: " ++ String.fromFloat (toFloat (round (model.stickerScale * 10)) / 10) ++ "x") ]
+                , Html.input
+                    [ Attr.type_ "range"
+                    , Attr.min "0.5"
+                    , Attr.max "2.0"
+                    , Attr.step "0.1"
+                    , Attr.value (String.fromFloat model.stickerScale)
+                    , Events.onInput (\v -> UpdateScale (Maybe.withDefault 1 (String.toFloat v)))
+                    , Attr.style "width" "100%"
+                    ]
+                    []
+                ]
+            , Html.p
+                [ Attr.style "margin-top" "15px"
+                , Attr.style "color" "#666"
+                , Attr.style "font-size" "0.9em"
+                ]
+                [ Html.text "Click anywhere on the canvas to place your sticker or text!" ]
             ]
-            (List.map (colorButton selectedColor) colors)
         ]
 
 
-colorButton : String -> String -> Html FrontendMsg
-colorButton selectedColor color =
+stickerButton : String -> String -> Html FrontendMsg
+stickerButton selectedSticker sticker =
     Html.button
-        [ Events.onClick (SelectColor color)
-        , Attr.style "width" "50px"
-        , Attr.style "height" "50px"
-        , Attr.style "border-radius" "8px"
+        [ Events.onClick (SelectSticker sticker)
+        , Attr.style "font-size" "2em"
+        , Attr.style "padding" "10px"
         , Attr.style "border"
-            (if selectedColor == color then
+            (if selectedSticker == sticker then
                 "3px solid #333"
 
              else
                 "1px solid #ddd"
             )
-        , Attr.style "background-color" color
+        , Attr.style "border-radius" "4px"
+        , Attr.style "background" "white"
         , Attr.style "cursor" "pointer"
         , Attr.style "transition" "all 0.2s"
         ]
-        []
+        [ Html.text sticker ]
 
 
-canvasGrid : Dict.Dict ( Int, Int ) String -> String -> Html FrontendMsg
-canvasGrid canvas _ =
-    let
-        gridSize =
-            50
-
-        pixelSize =
-            20
-    in
+freeformCanvas : Model -> Html FrontendMsg
+freeformCanvas model =
     card
-        [ Attr.style "padding" "20px"
-        , Attr.style "display" "inline-block"
+        [ Attr.style "padding" "0"
+        , Attr.style "overflow" "hidden"
+        , Attr.style "position" "relative"
+        , Attr.style "min-height" "600px"
         ]
         [ Html.div
-            [ Attr.style "display" "grid"
-            , Attr.style "grid-template-columns" ("repeat(" ++ String.fromInt gridSize ++ ", " ++ String.fromInt pixelSize ++ "px)")
-            , Attr.style "gap" "1px"
-            , Attr.style "background-color" "#ddd"
-            , Attr.style "padding" "1px"
+            [ onCanvasClick
+            , onCanvasMouseMove model.draggingItemId
+            , Events.onMouseUp StopDragging
+            , Attr.style "width" "100%"
+            , Attr.style "height" "600px"
+            , Attr.style "background" "#fafafa"
+            , Attr.style "cursor"
+                (if model.draggingItemId /= Nothing then
+                    "grabbing"
+
+                 else
+                    "crosshair"
+                )
+            , Attr.style "position" "relative"
             ]
-            (List.range 0 (gridSize - 1)
-                |> List.concatMap
-                    (\y ->
-                        List.range 0 (gridSize - 1)
-                            |> List.map (\x -> canvasPixel canvas x y pixelSize)
-                    )
-            )
+            (List.map (renderCanvasItem model.draggingItemId) model.canvasItems)
         ]
 
 
-canvasPixel : Dict.Dict ( Int, Int ) String -> Int -> Int -> Int -> Html FrontendMsg
-canvasPixel canvas x y pixelSize =
+onCanvasClick : Html.Attribute FrontendMsg
+onCanvasClick =
+    Events.on "click"
+        (Decode.map2 PlaceItemOnCanvas
+            (Decode.field "offsetX" Decode.float)
+            (Decode.field "offsetY" Decode.float)
+        )
+
+
+onCanvasMouseMove : Maybe String -> Html.Attribute FrontendMsg
+onCanvasMouseMove draggingItemId =
+    case draggingItemId of
+        Just _ ->
+            Events.on "mousemove"
+                (Decode.map2 DragItem
+                    (Decode.field "offsetX" Decode.float)
+                    (Decode.field "offsetY" Decode.float)
+                )
+
+        Nothing ->
+            Attr.style "" ""
+
+
+renderCanvasItem : Maybe String -> CanvasItem -> Html FrontendMsg
+renderCanvasItem draggingItemId item =
     let
-        pixelColor =
-            Dict.get ( x, y ) canvas
-                |> Maybe.withDefault "#FFFFFF"
+        transform =
+            "translate(-50%, -50%) rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")"
+
+        content =
+            case item.itemType of
+                Sticker emoji ->
+                    Html.text emoji
+
+                TextBox text ->
+                    Html.text text
+
+        isDragging =
+            draggingItemId == Just item.id
     in
     Html.div
-        [ Events.onClick (PlacePixel x y)
-        , Attr.style "width" (String.fromInt pixelSize ++ "px")
-        , Attr.style "height" (String.fromInt pixelSize ++ "px")
-        , Attr.style "background-color" pixelColor
-        , Attr.style "cursor" "pointer"
-        , Attr.style "transition" "background-color 0.1s"
+        [ Events.onMouseDown (StartDragging item.id)
+        , Events.stopPropagationOn "click" (Decode.succeed ( NoOpFrontendMsg, True ))
+        , Attr.style "position" "absolute"
+        , Attr.style "left" (String.fromFloat item.x ++ "px")
+        , Attr.style "top" (String.fromFloat item.y ++ "px")
+        , Attr.style "transform" transform
+        , Attr.style "font-size"
+            (case item.itemType of
+                Sticker _ ->
+                    "48px"
+
+                TextBox _ ->
+                    "18px"
+            )
+        , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+        , Attr.style "white-space" "pre-wrap"
+        , Attr.style "max-width" "300px"
+        , Attr.style "cursor"
+            (if isDragging then
+                "grabbing"
+
+             else
+                "grab"
+            )
+        , Attr.style "user-select" "none"
+        , Attr.style "pointer-events" "auto"
+        , Attr.style "opacity"
+            (if isDragging then
+                "0.7"
+
+             else
+                "1"
+            )
         ]
-        []
+        [ content ]

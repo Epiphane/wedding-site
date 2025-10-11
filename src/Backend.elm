@@ -24,7 +24,7 @@ init =
     ( { guests = initialGuestList
       , rsvps = Dict.empty
       , authenticatedSessions = Dict.empty
-      , canvas = Dict.empty
+      , canvasItems = []
       }
     , Cmd.none
     )
@@ -137,16 +137,33 @@ updateFromFrontend sessionId clientId msg model =
             , Lamdera.sendToFrontend clientId GuestDeleted
             )
 
-        GetCanvas ->
-            ( model, Lamdera.sendToFrontend clientId (CanvasUpdated model.canvas) )
+        GetCanvasItems ->
+            ( model, Lamdera.sendToFrontend clientId (CanvasItemsReceived model.canvasItems) )
 
-        PlacePixelOnCanvas x y color ->
+        PlaceCanvasItem item ->
             let
-                updatedCanvas =
-                    Dict.insert ( x, y ) color model.canvas
+                updatedItems =
+                    item :: model.canvasItems
             in
-            ( { model | canvas = updatedCanvas }
-            , Lamdera.broadcast (PixelPlaced x y color)
+            ( { model | canvasItems = updatedItems }
+            , Lamdera.broadcast (CanvasItemPlaced item)
+            )
+
+        UpdateCanvasItemPosition itemId x y ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | x = x, y = y }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }
+            , Lamdera.broadcast (CanvasItemMoved itemId x y)
             )
 
         NoOpToBackend ->
