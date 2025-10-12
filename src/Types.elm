@@ -125,6 +125,7 @@ type FrontendMsg
     | StartDragging String
     | StopDragging
     | DragItem Float Float
+    | UpdateItemTransform String Float Float Float Float
     | NoOpFrontendMsg
 
 
@@ -139,6 +140,8 @@ type ToBackend
     | DeleteGuestByEmail String
     | PlaceCanvasItem CanvasItem
     | UpdateCanvasItemPosition String Float Float
+    | UpdateCanvasItemRotation String Float
+    | UpdateCanvasItemScale String Float
     | GetCanvasItems
     | NoOpToBackend
 
@@ -160,4 +163,6 @@ type ToFrontend
     | CanvasItemsReceived (List CanvasItem)
     | CanvasItemPlaced CanvasItem
     | CanvasItemMoved String Float Float
+    | CanvasItemRotated String Float
+    | CanvasItemScaled String Float
     | NoOpToFrontend

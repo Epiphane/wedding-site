@@ -166,5 +166,39 @@ updateFromFrontend sessionId clientId msg model =
             , Lamdera.broadcast (CanvasItemMoved itemId x y)
             )
 
+        UpdateCanvasItemRotation itemId rotation ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | rotation = rotation }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }
+            , Lamdera.broadcast (CanvasItemRotated itemId rotation)
+            )
+
+        UpdateCanvasItemScale itemId scale ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | scale = scale }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }
+            , Lamdera.broadcast (CanvasItemScaled itemId scale)
+            )
+
         NoOpToBackend ->
             ( model, Cmd.none )

@@ -1,4 +1,4 @@
-module Frontend exposing (..)
+port module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
@@ -6,9 +6,20 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Lamdera
 import Types exposing (..)
 import Url
+
+
+
+-- PORTS
+
+
+port initMoveable : Encode.Value -> Cmd msg
+
+
+port moveableUpdate : (Encode.Value -> msg) -> Sub msg
 
 
 type alias Model =
@@ -22,9 +33,52 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         , view = view
         }
+
+
+subscriptions : Model -> Sub FrontendMsg
+subscriptions _ =
+    moveableUpdate
+        (\value ->
+            case Decode.decodeValue moveableDecoder value of
+                Ok transform ->
+                    UpdateItemTransform transform.id transform.x transform.y transform.rotation transform.scale
+
+                Err _ ->
+                    NoOpFrontendMsg
+        )
+
+
+type alias MoveableTransform =
+    { id : String
+    , x : Float
+    , y : Float
+    , rotation : Float
+    , scale : Float
+    }
+
+
+moveableDecoder : Decode.Decoder MoveableTransform
+moveableDecoder =
+    Decode.map5 MoveableTransform
+        (Decode.field "id" Decode.string)
+        (Decode.field "x" Decode.float)
+        (Decode.field "y" Decode.float)
+        (Decode.field "rotation" Decode.float)
+        (Decode.field "scale" Decode.float)
+
+
+encodeCanvasItem : CanvasItem -> Encode.Value
+encodeCanvasItem item =
+    Encode.object
+        [ ( "id", Encode.string item.id )
+        , ( "x", Encode.float item.x )
+        , ( "y", Encode.float item.y )
+        , ( "rotation", Encode.float item.rotation )
+        , ( "scale", Encode.float item.scale )
+        ]
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -286,6 +340,27 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
+        UpdateItemTransform itemId x y rotation scale ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | x = x, y = y, rotation = rotation, scale = scale }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }
+            , Cmd.batch
+                [ Lamdera.sendToBackend (UpdateCanvasItemPosition itemId x y)
+                , Lamdera.sendToBackend (UpdateCanvasItemRotation itemId rotation)
+                , Lamdera.sendToBackend (UpdateCanvasItemScale itemId scale)
+                ]
+            )
+
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
@@ -338,10 +413,14 @@ updateFromBackend msg model =
             )
 
         CanvasItemsReceived items ->
-            ( { model | canvasItems = items }, Cmd.none )
+            ( { model | canvasItems = items }
+            , initMoveable (Encode.list encodeCanvasItem items)
+            )
 
         CanvasItemPlaced item ->
-            ( { model | canvasItems = item :: model.canvasItems }, Cmd.none )
+            ( { model | canvasItems = item :: model.canvasItems }
+            , initMoveable (Encode.list encodeCanvasItem [ item ])
+            )
 
         CanvasItemMoved itemId x y ->
             let
@@ -350,6 +429,36 @@ updateFromBackend msg model =
                         (\item ->
                             if item.id == itemId then
                                 { item | x = x, y = y }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }, Cmd.none )
+
+        CanvasItemRotated itemId rotation ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | rotation = rotation }
+
+                            else
+                                item
+                        )
+                        model.canvasItems
+            in
+            ( { model | canvasItems = updatedItems }, Cmd.none )
+
+        CanvasItemScaled itemId scale ->
+            let
+                updatedItems =
+                    List.map
+                        (\item ->
+                            if item.id == itemId then
+                                { item | scale = scale }
 
                             else
                                 item
@@ -1753,21 +1862,13 @@ freeformCanvas model =
         ]
         [ Html.div
             [ onCanvasClick
-            , onCanvasMouseMove model.draggingItemId
-            , Events.onMouseUp StopDragging
             , Attr.style "width" "100%"
             , Attr.style "height" "600px"
             , Attr.style "background" "#fafafa"
-            , Attr.style "cursor"
-                (if model.draggingItemId /= Nothing then
-                    "grabbing"
-
-                 else
-                    "crosshair"
-                )
+            , Attr.style "cursor" "crosshair"
             , Attr.style "position" "relative"
             ]
-            (List.map (renderCanvasItem model.draggingItemId) model.canvasItems)
+            (List.map renderCanvasItem model.canvasItems)
         ]
 
 
@@ -1780,26 +1881,9 @@ onCanvasClick =
         )
 
 
-onCanvasMouseMove : Maybe String -> Html.Attribute FrontendMsg
-onCanvasMouseMove draggingItemId =
-    case draggingItemId of
-        Just _ ->
-            Events.on "mousemove"
-                (Decode.map2 DragItem
-                    (Decode.field "offsetX" Decode.float)
-                    (Decode.field "offsetY" Decode.float)
-                )
-
-        Nothing ->
-            Attr.style "" ""
-
-
-renderCanvasItem : Maybe String -> CanvasItem -> Html FrontendMsg
-renderCanvasItem draggingItemId item =
+renderCanvasItem : CanvasItem -> Html FrontendMsg
+renderCanvasItem item =
     let
-        transform =
-            "translate(-50%, -50%) rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")"
-
         content =
             case item.itemType of
                 Sticker emoji ->
@@ -1807,17 +1891,15 @@ renderCanvasItem draggingItemId item =
 
                 TextBox text ->
                     Html.text text
-
-        isDragging =
-            draggingItemId == Just item.id
     in
     Html.div
-        [ Events.onMouseDown (StartDragging item.id)
+        [ Attr.attribute "data-moveable-id" item.id
         , Events.stopPropagationOn "click" (Decode.succeed ( NoOpFrontendMsg, True ))
         , Attr.style "position" "absolute"
         , Attr.style "left" (String.fromFloat item.x ++ "px")
         , Attr.style "top" (String.fromFloat item.y ++ "px")
-        , Attr.style "transform" transform
+        , Attr.style "transform" ("rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")")
+        , Attr.style "transform-origin" "center center"
         , Attr.style "font-size"
             (case item.itemType of
                 Sticker _ ->
@@ -1829,21 +1911,8 @@ renderCanvasItem draggingItemId item =
         , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
         , Attr.style "white-space" "pre-wrap"
         , Attr.style "max-width" "300px"
-        , Attr.style "cursor"
-            (if isDragging then
-                "grabbing"
-
-             else
-                "grab"
-            )
+        , Attr.style "cursor" "move"
         , Attr.style "user-select" "none"
-        , Attr.style "pointer-events" "auto"
-        , Attr.style "opacity"
-            (if isDragging then
-                "0.7"
-
-             else
-                "1"
-            )
+        , Attr.style "padding" "4px"
         ]
         [ content ]
