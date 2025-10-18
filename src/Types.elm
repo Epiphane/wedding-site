@@ -56,6 +56,7 @@ type CanvasItemType
 
 type alias CanvasItem =
     { id : String
+    , owner : String
     , itemType : CanvasItemType
     , x : Float
     , y : Float

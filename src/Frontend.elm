@@ -16,7 +16,10 @@ import Url
 -- PORTS
 
 
-port initMoveable : Encode.Value -> Cmd msg
+port initMoveable : List String -> Cmd msg
+
+
+port createMoveable : String -> Cmd msg
 
 
 port moveableUpdate : (Encode.Value -> msg) -> Sub msg
@@ -70,15 +73,9 @@ moveableDecoder =
         (Decode.field "scale" Decode.float)
 
 
-encodeCanvasItem : CanvasItem -> Encode.Value
-encodeCanvasItem item =
-    Encode.object
-        [ ( "id", Encode.string item.id )
-        , ( "x", Encode.float item.x )
-        , ( "y", Encode.float item.y )
-        , ( "rotation", Encode.float item.rotation )
-        , ( "scale", Encode.float item.scale )
-        ]
+initMoveables : CanvasItems -> Cmd msg
+initMoveables items =
+    initMoveable (List.map (\a -> a.id) items)
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -293,6 +290,7 @@ update msg model =
                 item =
                     if model.textInput /= "" then
                         { id = String.fromInt (List.length model.canvasItems)
+                        , owner = model.sessionName
                         , itemType = TextBox model.textInput
                         , x = x
                         , y = y
@@ -302,6 +300,7 @@ update msg model =
 
                     else
                         { id = String.fromInt (List.length model.canvasItems)
+                        , owner = model.sessionName
                         , itemType = Sticker model.selectedSticker
                         , x = x
                         , y = y
@@ -376,7 +375,9 @@ updateFromBackend msg model =
             ( { model | rsvpStep = GuestNotFound }, Cmd.none )
 
         InitialBackend sessionInfo canvasItems ->
-            ( { model | sessionName = sessionInfo.name, isAuthenticated = sessionInfo.isAdmin, canvasItems = canvasItems }, Cmd.none )
+            ( { model | sessionName = sessionInfo.name, isAuthenticated = sessionInfo.isAdmin, canvasItems = canvasItems }
+            , initMoveables canvasItems
+            )
 
         RsvpSubmitted count ->
             ( { model | rsvpCount = count }, Cmd.none )
@@ -418,12 +419,12 @@ updateFromBackend msg model =
 
         CanvasReceived canvasItems ->
             ( { model | canvasItems = canvasItems }
-            , initMoveable (Encode.list encodeCanvasItem canvasItems)
+            , initMoveables canvasItems
             )
 
         CanvasItemPlaced item ->
             ( { model | canvasItems = item :: model.canvasItems }
-            , initMoveable (Encode.list encodeCanvasItem [ item ])
+            , initMoveables [ item ]
             )
 
         CanvasItemMoved itemId x y ->
@@ -1865,12 +1866,12 @@ freeformCanvas model =
         , Attr.style "min-height" "600px"
         ]
         [ Html.div
-            [ onCanvasClick
-            , Attr.style "width" "100%"
+            [ Attr.style "width" "100%"
             , Attr.style "height" "600px"
             , Attr.style "background" "#fafafa"
             , Attr.style "cursor" "crosshair"
             , Attr.style "position" "relative"
+            , onCanvasClick
             ]
             (List.map renderCanvasItem model.canvasItems)
         ]
@@ -1888,6 +1889,9 @@ onCanvasClick =
 renderCanvasItem : CanvasItem -> Html FrontendMsg
 renderCanvasItem item =
     let
+        _ =
+            Debug.log "test" item
+
         content =
             case item.itemType of
                 Sticker emoji ->
