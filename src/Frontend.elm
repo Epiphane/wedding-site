@@ -88,6 +88,8 @@ init url key =
       , coupleNames = ( "Thomas Steinke", "Liz Petersen" )
       , weddingDate = "August 22, 2026"
       , venue = "Ampitheatre of the Redwoods"
+      , sessionName = ""
+      , isAuthenticated = False
       , rsvpStep = EnteringName
       , rsvpName = ""
       , rsvpAttending = Attending
@@ -95,7 +97,6 @@ init url key =
       , rsvpPlusOneAttending = Attending
       , rsvpSubmitted = False
       , rsvpCount = 0
-      , adminAuthenticated = False
       , adminPasswordInput = ""
       , adminLoginError = False
       , adminGuestList = []
@@ -110,7 +111,7 @@ init url key =
       , stickerScale = 1.0
       , draggingItemId = Nothing
       }
-    , Lamdera.sendToBackend CheckAdminAuth
+    , Lamdera.sendToBackend GetBackendModel
     )
 
 
@@ -158,7 +159,7 @@ update msg model =
 
                 cmd =
                     if newRoute == CanvasPage then
-                        Lamdera.sendToBackend GetCanvasItems
+                        Lamdera.sendToBackend GetCanvas
 
                     else
                         Cmd.none
@@ -271,8 +272,8 @@ update msg model =
             ( model, Cmd.none )
 
         AdminLogout ->
-            ( { model | adminAuthenticated = False }
-            , Lamdera.sendToBackend AdminLogoutBackend
+            ( { model | isAuthenticated = False }
+            , Lamdera.sendToBackend LogoutBackend
             )
 
         SelectSticker sticker ->
@@ -374,6 +375,9 @@ updateFromBackend msg model =
         GuestNotFoundResponse ->
             ( { model | rsvpStep = GuestNotFound }, Cmd.none )
 
+        InitialBackend sessionInfo canvasItems ->
+            ( { model | sessionName = sessionInfo.name, isAuthenticated = sessionInfo.isAdmin, canvasItems = canvasItems }, Cmd.none )
+
         RsvpSubmitted count ->
             ( { model | rsvpCount = count }, Cmd.none )
 
@@ -388,7 +392,7 @@ updateFromBackend msg model =
 
         AdminAuthStatus isAuthenticated ->
             if isAuthenticated then
-                ( { model | adminAuthenticated = True }
+                ( { model | isAuthenticated = True }
                 , Lamdera.sendToBackend GetGuestList
                 )
 
@@ -397,7 +401,7 @@ updateFromBackend msg model =
 
         AdminLoginSuccess ->
             ( { model
-                | adminAuthenticated = True
+                | isAuthenticated = True
                 , adminPasswordInput = ""
                 , adminLoginError = False
               }
@@ -406,15 +410,15 @@ updateFromBackend msg model =
 
         AdminLoginFailed ->
             ( { model
-                | adminAuthenticated = False
+                | isAuthenticated = False
                 , adminLoginError = True
               }
             , Cmd.none
             )
 
-        CanvasItemsReceived items ->
-            ( { model | canvasItems = items }
-            , initMoveable (Encode.list encodeCanvasItem items)
+        CanvasReceived canvasItems ->
+            ( { model | canvasItems = canvasItems }
+            , initMoveable (Encode.list encodeCanvasItem canvasItems)
             )
 
         CanvasItemPlaced item ->
@@ -510,7 +514,7 @@ view model =
 
 
 navigationBar : Route -> Bool -> Html FrontendMsg
-navigationBar currentRoute isAdminAuthenticated =
+navigationBar currentRoute isisAuthenticated =
     Html.nav
         [ Attr.style "background" "white"
         , Attr.style "border-top" "1px solid #e0e0e0"
@@ -529,7 +533,7 @@ navigationBar currentRoute isAdminAuthenticated =
              , navLink "/schedule" "Schedule" (currentRoute == SchedulePage)
              , navLink "/rsvp" "RSVP" (currentRoute == RsvpPage)
              ]
-                ++ (if isAdminAuthenticated then
+                ++ (if isisAuthenticated then
                         [ navLink "/admin" "Admin" (currentRoute == AdminPage) ]
 
                     else
@@ -566,7 +570,7 @@ homePage model name1 name2 =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
+        , navigationBar model.route model.isAuthenticated
         , heroImageSection
         , coupleFullNamesSection model name1 name2
         , detailsSection model
@@ -580,7 +584,7 @@ rsvpPage model name1 name2 =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
+        , navigationBar model.route model.isAuthenticated
         , rsvpFormSection model
         , footerSection
         ]
@@ -591,7 +595,7 @@ travelPage model name1 name2 =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
+        , navigationBar model.route model.isAuthenticated
         , travelInfoSection
         , footerSection
         ]
@@ -602,7 +606,7 @@ schedulePage model name1 name2 =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
+        , navigationBar model.route model.isAuthenticated
         , scheduleInfoSection model
         , footerSection
         ]
@@ -1147,8 +1151,8 @@ adminPage model =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
-        , if model.adminAuthenticated then
+        , navigationBar model.route model.isAuthenticated
+        , if model.isAuthenticated then
             Html.div []
                 [ Html.div
                     [ Attr.style "max-width" "1000px"
@@ -1681,7 +1685,7 @@ canvasPage model =
     Html.div []
         [ dateLocationHeader model
         , coupleNamesHeader name1 name2
-        , navigationBar model.route model.adminAuthenticated
+        , navigationBar model.route model.isAuthenticated
         , Html.div
             [ Attr.style "max-width" "1400px"
             , Attr.style "margin" "40px auto"
@@ -1714,8 +1718,8 @@ canvasControls model =
                 [ Html.text "Add Sticker" ]
             , Html.div
                 [ Attr.style "display" "grid"
-                , Attr.style "grid-template-columns" "repeat(4, 1fr)"
-                , Attr.style "gap" "10px"
+                , Attr.style "grid-template-columns" "auto auto auto"
+                , Attr.style "gap" "8px"
                 ]
                 (List.map (stickerButton model.selectedSticker)
                     [ "❤️"

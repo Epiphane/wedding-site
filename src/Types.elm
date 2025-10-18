@@ -14,6 +14,12 @@ type alias Guest =
     }
 
 
+type alias SessionInfo =
+    { name : String
+    , isAdmin : Bool
+    }
+
+
 type alias RsvpResponse =
     { guestName : String
     , email : String
@@ -58,12 +64,18 @@ type alias CanvasItem =
     }
 
 
+type alias CanvasItems =
+    List CanvasItem
+
+
 type alias FrontendModel =
     { key : Key
     , route : Route
     , coupleNames : ( String, String )
     , weddingDate : String
     , venue : String
+    , sessionName : String
+    , isAuthenticated : Bool
     , rsvpStep : RsvpStep
     , rsvpName : String
     , rsvpAttending : AttendanceStatus
@@ -71,7 +83,6 @@ type alias FrontendModel =
     , rsvpPlusOneAttending : AttendanceStatus
     , rsvpSubmitted : Bool
     , rsvpCount : Int
-    , adminAuthenticated : Bool
     , adminPasswordInput : String
     , adminLoginError : Bool
     , adminGuestList : List Guest
@@ -79,7 +90,7 @@ type alias FrontendModel =
     , adminFormName : String
     , adminFormEmail : String
     , adminFormPlusOne : Bool
-    , canvasItems : List CanvasItem
+    , canvasItems : CanvasItems
     , selectedSticker : String
     , textInput : String
     , stickerRotation : Float
@@ -91,8 +102,8 @@ type alias FrontendModel =
 type alias BackendModel =
     { guests : Dict String Guest
     , rsvps : Dict String RsvpResponse
-    , authenticatedSessions : Dict SessionId Bool
-    , canvasItems : List CanvasItem
+    , sessions : Dict SessionId SessionInfo
+    , canvasItems : CanvasItems
     }
 
 
@@ -132,9 +143,9 @@ type FrontendMsg
 type ToBackend
     = LookupGuestByName String
     | SubmitRsvpToBackend RsvpResponse
+    | GetBackendModel
     | AdminLogin String
-    | AdminLogoutBackend
-    | CheckAdminAuth
+    | LogoutBackend
     | GetGuestList
     | AddOrUpdateGuest Guest
     | DeleteGuestByEmail String
@@ -142,7 +153,7 @@ type ToBackend
     | UpdateCanvasItemPosition String Float Float
     | UpdateCanvasItemRotation String Float
     | UpdateCanvasItemScale String Float
-    | GetCanvasItems
+    | GetCanvas
     | NoOpToBackend
 
 
@@ -153,6 +164,7 @@ type BackendMsg
 type ToFrontend
     = GuestFound Guest
     | GuestNotFoundResponse
+    | InitialBackend SessionInfo CanvasItems
     | RsvpSubmitted Int
     | AdminLoginSuccess
     | AdminLoginFailed
@@ -160,7 +172,7 @@ type ToFrontend
     | GuestListReceived (List Guest)
     | GuestSaved
     | GuestDeleted
-    | CanvasItemsReceived (List CanvasItem)
+    | CanvasReceived CanvasItems
     | CanvasItemPlaced CanvasItem
     | CanvasItemMoved String Float Float
     | CanvasItemRotated String Float

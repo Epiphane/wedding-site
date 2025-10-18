@@ -45,7 +45,6 @@ type alias FrontendModel =
     , rsvpPlusOneAttending : AttendanceStatus
     , rsvpSubmitted : Bool
     , rsvpCount : Int
-    , adminAuthenticated : Bool
     , adminPasswordInput : String
     , adminLoginError : Bool
     , adminGuestList : List Guest
@@ -105,7 +104,7 @@ type ToBackend
     = LookupGuestByName String
     | SubmitRsvpToBackend RsvpResponse
     | AdminLogin String
-    | AdminLogoutBackend
+    | LogoutBackend
     | CheckAdminAuth
     | GetGuestList
     | AddOrUpdateGuest Guest

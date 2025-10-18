@@ -23,7 +23,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { guests = initialGuestList
       , rsvps = Dict.empty
-      , authenticatedSessions = Dict.empty
+      , sessions = Dict.empty
       , canvasItems = []
       }
     , Cmd.none
@@ -47,6 +47,12 @@ update msg model =
     case msg of
         NoOpBackendMsg ->
             ( model, Cmd.none )
+
+
+getSession : Model -> SessionId -> SessionInfo
+getSession model sessionId =
+    Dict.get sessionId model.sessions
+        |> Maybe.withDefault { name = "", isAdmin = False }
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -79,35 +85,37 @@ updateFromFrontend sessionId clientId msg model =
             , Lamdera.sendToFrontend clientId (RsvpSubmitted rsvpCount)
             )
 
+        GetBackendModel ->
+            let
+                session =
+                    getSession model sessionId
+            in
+            ( model, Lamdera.sendToFrontend clientId (InitialBackend session model.canvasItems) )
+
         AdminLogin password ->
             if password == Env.adminPassword then
                 let
+                    prevSession =
+                        getSession model sessionId
+
                     updatedSessions =
-                        Dict.insert sessionId True model.authenticatedSessions
+                        Dict.insert sessionId { prevSession | isAdmin = True } model.sessions
                 in
-                ( { model | authenticatedSessions = updatedSessions }
+                ( { model | sessions = updatedSessions }
                 , Lamdera.sendToFrontend clientId AdminLoginSuccess
                 )
 
             else
                 ( model, Lamdera.sendToFrontend clientId AdminLoginFailed )
 
-        AdminLogoutBackend ->
+        LogoutBackend ->
             let
                 updatedSessions =
-                    Dict.remove sessionId model.authenticatedSessions
+                    Dict.remove sessionId model.sessions
             in
-            ( { model | authenticatedSessions = updatedSessions }
+            ( { model | sessions = updatedSessions }
             , Cmd.none
             )
-
-        CheckAdminAuth ->
-            let
-                isAuthenticated =
-                    Dict.get sessionId model.authenticatedSessions
-                        |> Maybe.withDefault False
-            in
-            ( model, Lamdera.sendToFrontend clientId (AdminAuthStatus isAuthenticated) )
 
         GetGuestList ->
             let
@@ -137,8 +145,8 @@ updateFromFrontend sessionId clientId msg model =
             , Lamdera.sendToFrontend clientId GuestDeleted
             )
 
-        GetCanvasItems ->
-            ( model, Lamdera.sendToFrontend clientId (CanvasItemsReceived model.canvasItems) )
+        GetCanvas ->
+            ( model, Lamdera.sendToFrontend clientId (CanvasReceived model.canvasItems) )
 
         PlaceCanvasItem item ->
             let
