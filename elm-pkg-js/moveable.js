@@ -3,7 +3,9 @@ port initMoveable : String -> Cmd msg
 */
 
 exports.init = async function (app) {
+    /*
     app.ports.initMoveable.subscribe(function (elements) {
+        return;
         setTimeout(() => {
 
             for (let id of elements) {
@@ -54,4 +56,5 @@ exports.init = async function (app) {
             }
         }, 10);
     })
+    */
 }

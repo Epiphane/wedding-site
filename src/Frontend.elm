@@ -1,7 +1,9 @@
-port module Frontend exposing (..)
+module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Canvas exposing (render)
+import CanvasTypes exposing (..)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
@@ -10,19 +12,6 @@ import Json.Encode as Encode
 import Lamdera
 import Types exposing (..)
 import Url
-
-
-
--- PORTS
-
-
-port initMoveable : List String -> Cmd msg
-
-
-port createMoveable : String -> Cmd msg
-
-
-port moveableUpdate : (Encode.Value -> msg) -> Sub msg
 
 
 type alias Model =
@@ -42,16 +31,8 @@ app =
 
 
 subscriptions : Model -> Sub FrontendMsg
-subscriptions _ =
-    moveableUpdate
-        (\value ->
-            case Decode.decodeValue moveableDecoder value of
-                Ok transform ->
-                    UpdateItemTransform transform.id transform.x transform.y transform.rotation transform.scale
-
-                Err _ ->
-                    NoOpFrontendMsg
-        )
+subscriptions { canvas } =
+    Canvas.subscriptions canvas |> Sub.map Canvas
 
 
 type alias MoveableTransform =
@@ -71,11 +52,6 @@ moveableDecoder =
         (Decode.field "y" Decode.float)
         (Decode.field "rotation" Decode.float)
         (Decode.field "scale" Decode.float)
-
-
-initMoveables : CanvasItems -> Cmd msg
-initMoveables items =
-    initMoveable (List.map (\a -> a.id) items)
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -107,6 +83,7 @@ init url key =
       , stickerRotation = 0
       , stickerScale = 1.0
       , draggingItemId = Nothing
+      , canvas = Canvas.init
       }
     , Lamdera.sendToBackend GetBackendModel
     )
@@ -136,6 +113,37 @@ urlToRoute url =
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
+    case msg of
+        Canvas cMsg ->
+            let
+                ( canvas, canvasCmd ) =
+                    Canvas.update cMsg model.canvas
+            in
+            ( { model | canvas = canvas }, canvasCmd )
+
+        _ ->
+            updateSelf msg model
+
+
+
+{-
+   let
+       ( canvas, canvasCmd ) =
+           Canvas.update msg model.canvas
+
+       updatedModel =
+           { model | canvas = canvas }
+   in
+   if canvasCmd == Cmd.none then
+       ( updatedModel, canvasCmd )
+
+   else
+       updateSelf msg updatedModel
+-}
+
+
+updateSelf : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
+updateSelf msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
@@ -291,7 +299,7 @@ update msg model =
                     if model.textInput /= "" then
                         { id = String.fromInt (List.length model.canvasItems)
                         , owner = model.sessionName
-                        , itemType = TextBox model.textInput
+                        , itemType = CanvasTypes.TextBox model.textInput
                         , x = x
                         , y = y
                         , rotation = model.stickerRotation
@@ -301,7 +309,7 @@ update msg model =
                     else
                         { id = String.fromInt (List.length model.canvasItems)
                         , owner = model.sessionName
-                        , itemType = Sticker model.selectedSticker
+                        , itemType = CanvasTypes.TextBox model.selectedSticker
                         , x = x
                         , y = y
                         , rotation = model.stickerRotation
@@ -311,34 +319,6 @@ update msg model =
             ( { model | textInput = "", stickerRotation = 0, stickerScale = 1.0 }
             , Lamdera.sendToBackend (PlaceCanvasItem item)
             )
-
-        StartDragging itemId ->
-            ( { model | draggingItemId = Just itemId }, Cmd.none )
-
-        StopDragging ->
-            ( { model | draggingItemId = Nothing }, Cmd.none )
-
-        DragItem x y ->
-            case model.draggingItemId of
-                Just itemId ->
-                    let
-                        updatedItems =
-                            List.map
-                                (\item ->
-                                    if item.id == itemId then
-                                        { item | x = x, y = y }
-
-                                    else
-                                        item
-                                )
-                                model.canvasItems
-                    in
-                    ( { model | canvasItems = updatedItems }
-                    , Lamdera.sendToBackend (UpdateCanvasItemPosition itemId x y)
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
 
         UpdateItemTransform itemId x y rotation scale ->
             let
@@ -361,7 +341,7 @@ update msg model =
                 ]
             )
 
-        NoOpFrontendMsg ->
+        _ ->
             ( model, Cmd.none )
 
 
@@ -376,7 +356,7 @@ updateFromBackend msg model =
 
         InitialBackend sessionInfo canvasItems ->
             ( { model | sessionName = sessionInfo.name, isAuthenticated = sessionInfo.isAdmin, canvasItems = canvasItems }
-            , initMoveables canvasItems
+            , Cmd.none
             )
 
         RsvpSubmitted count ->
@@ -419,12 +399,12 @@ updateFromBackend msg model =
 
         CanvasReceived canvasItems ->
             ( { model | canvasItems = canvasItems }
-            , initMoveables canvasItems
+            , Cmd.none
             )
 
         CanvasItemPlaced item ->
             ( { model | canvasItems = item :: model.canvasItems }
-            , initMoveables [ item ]
+            , Cmd.none
             )
 
         CanvasItemMoved itemId x y ->
@@ -508,7 +488,7 @@ view model =
                     adminPage model
 
                 CanvasPage ->
-                    canvasPage model
+                    Canvas.render model.canvas
             ]
         ]
     }
@@ -1699,7 +1679,8 @@ canvasPage model =
                 , Attr.style "align-items" "start"
                 ]
                 [ canvasControls model
-                , freeformCanvas model
+
+                --, freeformCanvas model
                 ]
             ]
         , footerSection
@@ -1857,70 +1838,71 @@ stickerButton selectedSticker sticker =
         [ Html.text sticker ]
 
 
-freeformCanvas : Model -> Html FrontendMsg
-freeformCanvas model =
-    card
-        [ Attr.style "padding" "0"
-        , Attr.style "overflow" "hidden"
-        , Attr.style "position" "relative"
-        , Attr.style "min-height" "600px"
-        ]
-        [ Html.div
-            [ Attr.style "width" "100%"
-            , Attr.style "height" "600px"
-            , Attr.style "background" "#fafafa"
-            , Attr.style "cursor" "crosshair"
-            , Attr.style "position" "relative"
-            , onCanvasClick
-            ]
-            (List.map renderCanvasItem model.canvasItems)
-        ]
+
+{-
+   freeformCanvas : Model -> Html FrontendMsg
+   freeformCanvas model =
+       card
+           [ Attr.style "padding" "0"
+           , Attr.style "overflow" "hidden"
+           , Attr.style "position" "relative"
+           , Attr.style "min-height" "600px"
+           ]
+           [ Html.div
+               [ Attr.style "width" "100%"
+               , Attr.style "height" "600px"
+               , Attr.style "background" "#fafafa"
+               , Attr.style "cursor" "crosshair"
+               , Attr.style "position" "relative"
+               , onCanvasClick
+               ]
+               (List.map renderCanvasItem model.canvasItems)
+           ]
 
 
-onCanvasClick : Html.Attribute FrontendMsg
-onCanvasClick =
-    Events.on "click"
-        (Decode.map2 PlaceItemOnCanvas
-            (Decode.field "offsetX" Decode.float)
-            (Decode.field "offsetY" Decode.float)
-        )
+   onCanvasClick : Html.Attribute FrontendMsg
+   onCanvasClick =
+       Events.on "click"
+           (Decode.map2 PlaceItemOnCanvas
+               (Decode.field "offsetX" Decode.float)
+               (Decode.field "offsetY" Decode.float)
+           )
 
 
-renderCanvasItem : CanvasItem -> Html FrontendMsg
-renderCanvasItem item =
-    let
-        _ =
-            Debug.log "test" item
 
-        content =
-            case item.itemType of
-                Sticker emoji ->
-                    Html.text emoji
+      renderCanvasItem : CanvasItem -> Html FrontendMsg
+      renderCanvasItem item =
+          let
+              content =
+                  case item.itemType of
+                      Sticker emoji ->
+                          Html.text emoji
 
-                TextBox text ->
-                    Html.text text
-    in
-    Html.div
-        [ Attr.attribute "data-moveable-id" item.id
-        , Events.stopPropagationOn "click" (Decode.succeed ( NoOpFrontendMsg, True ))
-        , Attr.style "position" "absolute"
-        , Attr.style "left" (String.fromFloat item.x ++ "px")
-        , Attr.style "top" (String.fromFloat item.y ++ "px")
-        , Attr.style "transform" ("rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")")
-        , Attr.style "transform-origin" "center center"
-        , Attr.style "font-size"
-            (case item.itemType of
-                Sticker _ ->
-                    "48px"
+                      TextBox text ->
+                          Html.text text
+          in
+          Html.div
+              [ Attr.attribute "data-moveable-id" item.id
+              , Events.stopPropagationOn "click" (Decode.succeed ( NoOpFrontendMsg, True ))
+              , Attr.style "position" "absolute"
+              , Attr.style "left" (String.fromFloat item.x ++ "px")
+              , Attr.style "top" (String.fromFloat item.y ++ "px")
+              , Attr.style "transform" ("rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")")
+              , Attr.style "transform-origin" "center center"
+              , Attr.style "font-size"
+                  (case item.itemType of
+                      Sticker _ ->
+                          "48px"
 
-                TextBox _ ->
-                    "18px"
-            )
-        , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
-        , Attr.style "white-space" "pre-wrap"
-        , Attr.style "max-width" "300px"
-        , Attr.style "cursor" "move"
-        , Attr.style "user-select" "none"
-        , Attr.style "padding" "4px"
-        ]
-        [ content ]
+                      TextBox _ ->
+                          "18px"
+                  )
+              , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
+              , Attr.style "white-space" "pre-wrap"
+              , Attr.style "max-width" "300px"
+              , Attr.style "cursor" "move"
+              , Attr.style "user-select" "none"
+              , Attr.style "padding" "4px"
+              ]
+              [ content ]
+-}

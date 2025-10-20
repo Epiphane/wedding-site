@@ -2,8 +2,10 @@ module Types exposing (..)
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
+import CanvasTypes exposing (..)
 import Dict exposing (Dict)
 import Lamdera exposing (SessionId)
+import Moveable exposing (..)
 import Url exposing (Url)
 
 
@@ -49,22 +51,6 @@ type Route
     | CanvasPage
 
 
-type CanvasItemType
-    = Sticker String
-    | TextBox String
-
-
-type alias CanvasItem =
-    { id : String
-    , owner : String
-    , itemType : CanvasItemType
-    , x : Float
-    , y : Float
-    , rotation : Float
-    , scale : Float
-    }
-
-
 type alias CanvasItems =
     List CanvasItem
 
@@ -97,6 +83,7 @@ type alias FrontendModel =
     , stickerRotation : Float
     , stickerScale : Float
     , draggingItemId : Maybe String
+    , canvas : CanvasModel
     }
 
 
@@ -134,10 +121,9 @@ type FrontendMsg
     | UpdateRotation Float
     | UpdateScale Float
     | PlaceItemOnCanvas Float Float
-    | StartDragging String
-    | StopDragging
-    | DragItem Float Float
     | UpdateItemTransform String Float Float Float Float
+    | Canvas CanvasMsg
+    | OnDragEnd String Moveable.Delta
     | NoOpFrontendMsg
 
 
