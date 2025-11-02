@@ -1,0 +1,41 @@
+import React from 'react';
+
+export default function Header({ weddingDate, venue, coupleNames }) {
+  const [name1, name2] = coupleNames;
+
+  return (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          padding: '20px 40px',
+          fontFamily: "'Georgia', 'Times New Roman', serif",
+          color: '#333'
+        }}
+      >
+        <div>{weddingDate}</div>
+        <div>{venue}</div>
+      </div>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '40px 20px 20px'
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "'Georgia', 'Times New Roman', serif",
+            fontSize: '3em',
+            fontWeight: '400',
+            margin: '0',
+            color: '#333',
+            letterSpacing: '1px'
+          }}
+        >
+          {name1} & {name2}
+        </h1>
+      </div>
+    </>
+  );
+}
