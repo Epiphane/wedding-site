@@ -1,6 +1,12 @@
 import React from 'react';
 
-export default function Header({ weddingDate, venue, coupleNames }) {
+interface HeaderProps {
+  weddingDate: string;
+  venue: string;
+  coupleNames: [string, string];
+}
+
+export default function Header({ weddingDate, venue, coupleNames }: HeaderProps): JSX.Element {
   const [name1, name2] = coupleNames;
 
   return (

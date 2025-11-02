@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { ReactNode, CSSProperties } from 'react';
 
-export default function Card({ children, style = {} }) {
+interface CardProps {
+  children: ReactNode;
+  style?: CSSProperties;
+}
+
+export default function Card({ children, style = {} }: CardProps): JSX.Element {
   return (
     <div
       style={{

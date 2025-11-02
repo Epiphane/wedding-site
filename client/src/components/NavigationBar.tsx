@@ -1,10 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-export default function NavigationBar({ isAuthenticated }) {
+interface NavigationBarProps {
+  isAuthenticated: boolean;
+}
+
+export default function NavigationBar({ isAuthenticated }: NavigationBarProps): JSX.Element {
   const location = useLocation();
 
-  const navLink = (href, label, isActive) => (
+  const navLink = (href: string, label: string, isActive: boolean): JSX.Element => (
     <Link
       to={href}
       style={{

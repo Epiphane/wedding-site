@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Socket } from 'socket.io-client';
 import io from 'socket.io-client';
 import HomePage from './pages/HomePage';
 import RsvpPage from './pages/RsvpPage';
@@ -11,8 +12,8 @@ import { AppProvider } from './context/AppContext';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
 
-function App() {
-  const [socket, setSocket] = useState(null);
+function App(): JSX.Element {
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
     const newSocket = io(SOCKET_URL);

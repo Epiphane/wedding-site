@@ -5,7 +5,15 @@ import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
 
-export default function SchedulePage() {
+interface ScheduleEventProps {
+  date: string;
+  title: string;
+  time: string;
+  location: string;
+  description: string;
+}
+
+export default function SchedulePage(): JSX.Element {
   const { model } = useApp();
 
   return (
@@ -79,7 +87,7 @@ export default function SchedulePage() {
   );
 }
 
-function ScheduleEvent({ date, title, time, location, description }) {
+function ScheduleEvent({ date, title, time, location, description }: ScheduleEventProps): JSX.Element {
   return (
     <Card style={{ marginBottom: '20px' }}>
       <div

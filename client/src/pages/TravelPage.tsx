@@ -5,7 +5,7 @@ import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
 
-export default function TravelPage() {
+export default function TravelPage(): JSX.Element {
   const { model } = useApp();
 
   return (

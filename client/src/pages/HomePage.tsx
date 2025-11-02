@@ -5,7 +5,7 @@ import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
 
-export default function HomePage() {
+export default function HomePage(): JSX.Element {
   const { model } = useApp();
   const [name1, name2] = model.coupleNames;
 
@@ -183,7 +183,7 @@ export default function HomePage() {
   );
 }
 
-function detailCard(emoji, title, content) {
+function detailCard(emoji: string, title: string, content: string): JSX.Element {
   return (
     <div
       style={{

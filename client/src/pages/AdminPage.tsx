@@ -1,13 +1,32 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, ChangeEvent } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
+import { FrontendModel, Guest } from '../types';
 
-export default function AdminPage() {
+interface AdminLoginFormProps {
+  model: FrontendModel;
+  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
+  sendToBackend: (msg: any) => void;
+}
+
+interface AdminGuestFormProps {
+  model: FrontendModel;
+  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
+  sendToBackend: (msg: any) => void;
+}
+
+interface AdminGuestTableProps {
+  model: FrontendModel;
+  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
+  sendToBackend: (msg: any) => void;
+  onEdit: (guest: Guest) => void;
+}
+
+export default function AdminPage(): JSX.Element {
   const { model, updateModel, sendToBackend } = useApp();
-  const [name1, name2] = model.coupleNames;
 
   useEffect(() => {
     if (model.isAuthenticated) {
@@ -56,9 +75,9 @@ export default function AdminPage() {
 
         <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '20px' }}>
           <AdminGuestForm model={model} updateModel={updateModel} sendToBackend={sendToBackend} />
-          <AdminGuestTable 
-            model={model} 
-            updateModel={updateModel} 
+          <AdminGuestTable
+            model={model}
+            updateModel={updateModel}
             sendToBackend={sendToBackend}
             onEdit={(guest) => {
               updateModel(prev => ({
@@ -91,8 +110,8 @@ export default function AdminPage() {
   );
 }
 
-function AdminLoginForm({ model, updateModel, sendToBackend }) {
-  const handlePasswordChange = (e) => {
+function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormProps): JSX.Element {
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, adminPasswordInput: e.target.value }));
   };
 
@@ -174,21 +193,21 @@ function AdminLoginForm({ model, updateModel, sendToBackend }) {
   );
 }
 
-function AdminGuestForm({ model, updateModel, sendToBackend }) {
-  const handleNameChange = (e) => {
+function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormProps): JSX.Element {
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, adminFormName: e.target.value }));
   };
 
-  const handleEmailChange = (e) => {
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, adminFormEmail: e.target.value }));
   };
 
-  const handlePlusOneChange = (e) => {
+  const handlePlusOneChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, adminFormPlusOne: e.target.checked }));
   };
 
   const handleSave = () => {
-    const guest = {
+    const guest: Guest = {
       name: model.adminFormName,
       email: model.adminFormEmail,
       plusOne: model.adminFormPlusOne
@@ -346,14 +365,12 @@ function AdminGuestForm({ model, updateModel, sendToBackend }) {
   );
 }
 
-function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }) {
-  const handleEdit = (guest) => {
-    if (onEdit) {
-      onEdit(guest);
-    }
+function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGuestTableProps): JSX.Element {
+  const handleEdit = (guest: Guest) => {
+    onEdit(guest);
   };
 
-  const handleDelete = (email) => {
+  const handleDelete = (email: string) => {
     sendToBackend({ type: 'deleteGuestByEmail', email });
   };
 

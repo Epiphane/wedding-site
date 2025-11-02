@@ -1,13 +1,31 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Socket } from 'socket.io-client';
+import { FrontendModel, ToBackend, ToFrontend } from '../types';
 
-const AppContext = createContext();
-
-export function useApp() {
-  return useContext(AppContext);
+interface AppContextType {
+  model: FrontendModel;
+  setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
+  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
+  sendToBackend: (msg: ToBackend) => void;
 }
 
-export function AppProvider({ children, socket }) {
-  const [model, setModel] = useState({
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function useApp(): AppContextType {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
+
+interface AppProviderProps {
+  children: ReactNode;
+  socket: Socket;
+}
+
+export function AppProvider({ children, socket }: AppProviderProps): JSX.Element {
+  const [model, setModel] = useState<FrontendModel>({
     coupleNames: ['Thomas Steinke', 'Liz Petersen'],
     weddingDate: 'August 22, 2026',
     venue: 'Ampitheatre of the Redwoods',
@@ -46,7 +64,7 @@ export function AppProvider({ children, socket }) {
     socket.emit('toBackend', { type: 'getBackendModel' });
 
     // Handle messages from backend
-    const handleToFrontend = (msg) => {
+    const handleToFrontend = (msg: ToFrontend) => {
       switch (msg.type) {
         case 'guestFound':
           setModel(prev => ({
@@ -146,7 +164,7 @@ export function AppProvider({ children, socket }) {
           break;
 
         default:
-          console.log('Unknown message type:', msg.type);
+          console.log('Unknown message type:', (msg as ToFrontend).type);
       }
     };
 
@@ -157,13 +175,13 @@ export function AppProvider({ children, socket }) {
     };
   }, [socket]);
 
-  const sendToBackend = (msg) => {
+  const sendToBackend = (msg: ToBackend): void => {
     if (socket) {
       socket.emit('toBackend', msg);
     }
   };
 
-  const updateModel = (updater) => {
+  const updateModel = (updater: (prev: FrontendModel) => FrontendModel): void => {
     setModel(updater);
   };
 

@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
+import { FrontendModel } from '../types';
 
-export default function RsvpPage() {
+interface RsvpHandlers {
+  handleUpdateRsvpName: (e: ChangeEvent<HTMLInputElement>) => void;
+  handleLookupGuest: () => void;
+  handleUpdateAttending: (e: ChangeEvent<HTMLSelectElement>) => void;
+  handleUpdatePlusOneName: (e: ChangeEvent<HTMLInputElement>) => void;
+  handleUpdatePlusOneAttending: (e: ChangeEvent<HTMLSelectElement>) => void;
+  handleSubmitRsvp: () => void;
+}
+
+export default function RsvpPage(): JSX.Element {
   const { model, updateModel, sendToBackend } = useApp();
 
-  const handleUpdateRsvpName = (e) => {
+  const handleUpdateRsvpName = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, rsvpName: e.target.value }));
   };
 
@@ -15,21 +25,21 @@ export default function RsvpPage() {
     sendToBackend({ type: 'lookupGuestByName', name: model.rsvpName });
   };
 
-  const handleUpdateAttending = (e) => {
+  const handleUpdateAttending = (e: ChangeEvent<HTMLSelectElement>) => {
     updateModel(prev => ({
       ...prev,
-      rsvpAttending: e.target.value
+      rsvpAttending: e.target.value as 'attending' | 'notAttending'
     }));
   };
 
-  const handleUpdatePlusOneName = (e) => {
+  const handleUpdatePlusOneName = (e: ChangeEvent<HTMLInputElement>) => {
     updateModel(prev => ({ ...prev, rsvpPlusOneName: e.target.value }));
   };
 
-  const handleUpdatePlusOneAttending = (e) => {
+  const handleUpdatePlusOneAttending = (e: ChangeEvent<HTMLSelectElement>) => {
     updateModel(prev => ({
       ...prev,
-      rsvpPlusOneAttending: e.target.value
+      rsvpPlusOneAttending: e.target.value as 'attending' | 'notAttending'
     }));
   };
 
@@ -100,7 +110,7 @@ export default function RsvpPage() {
   );
 }
 
-function renderRsvpForm(model, handlers) {
+function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Element | null {
   if (model.rsvpStep === 'enteringName' || model.rsvpStep === 'guestNotFound') {
     return (
       <div
