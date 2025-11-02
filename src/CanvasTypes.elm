@@ -27,5 +27,5 @@ type alias CanvasModel =
 
 type CanvasMsg
     = Moveable (Moveable.Msg String)
-      --| OnDragEnd String Moveable.Delta
+    | OnDragEnd String Moveable.Delta
     | Deactivate

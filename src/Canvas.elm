@@ -1,6 +1,7 @@
 module Canvas exposing (..)
 
 import CanvasTypes exposing (..)
+import Cmd.Extra exposing (message)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
@@ -42,24 +43,16 @@ update msg model =
         Moveable mMsg ->
             updateMoveable mMsg model
 
-        --OnDragEnd id delta ->
-        --    ( model, Cmd.none )
+        OnDragEnd id delta ->
+            ( model, Cmd.none )
+
         Deactivate ->
             ( model, Cmd.none )
 
 
-
---          ( { model | activeItemId = Nothing }, Cmd.none )
-
-
-send : msg -> Cmd msg
-send msg =
-    Task.perform (\_ -> msg) (Task.succeed ())
-
-
 moveableConfig : Moveable.Config String FrontendMsg
 moveableConfig =
-    Moveable.config2 (onDragEnd (\id delta -> send (OnDragEnd id delta)))
+    Moveable.config [ onDragEnd (\a b -> Canvas (OnDragEnd a b)) ]
 
 
 
@@ -72,10 +65,17 @@ moveableConfig =
 updateMoveable : Moveable.Msg String -> Model -> ( Model, Cmd FrontendMsg )
 updateMoveable msg model =
     let
-        ( newMoveable, newCmd ) =
+        ( newMoveable, maybeCmd ) =
             Moveable.update moveableConfig msg model.moveable
     in
-    ( { model | moveable = newMoveable }, newCmd )
+    ( { model | moveable = newMoveable }
+    , case maybeCmd of
+        Just cmd ->
+            message cmd
+
+        Nothing ->
+            Cmd.none
+    )
 
 
 render : Model -> Html FrontendMsg
@@ -134,32 +134,3 @@ renderItem item moveable =
             ]
             [ content ]
         )
-
-
-
-{--(
-    Html.div
-        [ Attr.attribute "data-moveable-id" item.id
-
-        --, Events.stopPropagationOn "click" (Decode.succeed ( NoOpFrontendMsg, True ))
-        , Attr.style "position" "absolute"
-        , Attr.style "left" (String.fromFloat item.x ++ "px")
-        , Attr.style "top" (String.fromFloat item.y ++ "px")
-        , Attr.style "transform" ("rotate(" ++ String.fromFloat item.rotation ++ "deg) scale(" ++ String.fromFloat item.scale ++ ")")
-        , Attr.style "transform-origin" "center center"
-        , Attr.style "font-size"
-            (case item.itemType of
-                Sticker _ ->
-                    "48px"
-
-                TextBox _ ->
-                    "18px"
-            )
-        , Attr.style "font-family" "'Georgia', 'Times New Roman', serif"
-        , Attr.style "white-space" "pre-wrap"
-        , Attr.style "max-width" "300px"
-        , Attr.style "cursor" "move"
-        , Attr.style "user-select" "none"
-        , Attr.style "padding" "4px"
-        ]
-        [ content ])--}

@@ -39,17 +39,17 @@ type alias Event id msg =
     Config id msg -> Config id msg
 
 
-onDragEnd : (id -> Delta -> Cmd msg) -> Event id msg
+onDragEnd : (id -> Delta -> msg) -> Event id msg
 onDragEnd toMsg baseConfig =
-    { baseConfig | onDragEnd = toMsg }
+    { baseConfig | onDragEnd = \a b -> toMsg a b |> Just }
 
 
 type alias Config id msg =
-    { onDragStart : id -> Cmd msg
-    , onDragBy : Delta -> Cmd msg
-    , onDragEnd : id -> Delta -> Cmd msg
-    , onClick : id -> Cmd msg
-    , onMouseDown : id -> Cmd msg
+    { onDragStart : id -> Maybe msg
+    , onDragBy : Delta -> Maybe msg
+    , onDragEnd : id -> Delta -> Maybe msg
+    , onClick : id -> Maybe msg
+    , onMouseDown : id -> Maybe msg
     }
 
 
@@ -99,40 +99,26 @@ subscriptions envelope model =
 
 defaultConfig : Config id msg
 defaultConfig =
-    { onDragStart = \_ -> Cmd.none
-    , onDragBy = \_ -> Cmd.none
-    , onDragEnd = \_ -> \_ -> Cmd.none
-    , onClick = \_ -> Cmd.none
-    , onMouseDown = \_ -> Cmd.none
+    { onDragStart = \_ -> Nothing
+    , onDragBy = \_ -> Nothing
+    , onDragEnd = \_ -> \_ -> Nothing
+    , onClick = \_ -> Nothing
+    , onMouseDown = \_ -> Nothing
     }
 
 
-config : Cmd msg -> List (Event id msg) -> Config id msg
-config noop events =
+config : List (Event id msg) -> Config id msg
+config events =
     let
         default =
-            { onDragStart = \_ -> noop
-            , onDragBy = \_ -> noop
-            , onDragEnd = \_ -> \_ -> noop
-            , onClick = \_ -> noop
-            , onMouseDown = \_ -> noop
+            { onDragStart = \_ -> Nothing
+            , onDragBy = \_ -> Nothing
+            , onDragEnd = \_ -> \_ -> Nothing
+            , onClick = \_ -> Nothing
+            , onMouseDown = \_ -> Nothing
             }
     in
     List.foldl (<|) default events
-
-
-config2 : Event id msg -> Config id msg
-config2 event =
-    let
-        default =
-            { onDragStart = \_ -> Cmd.none
-            , onDragBy = \_ -> Cmd.none
-            , onDragEnd = \_ -> \_ -> Cmd.none
-            , onClick = \_ -> Cmd.none
-            , onMouseDown = \_ -> Cmd.none
-            }
-    in
-    default |> event
 
 
 distanceTo : Position -> Position -> Delta
@@ -142,7 +128,7 @@ distanceTo end start =
     )
 
 
-update : Config id msg -> Msg id -> Model id -> ( Model id, Cmd msg )
+update : Config id msg -> Msg id -> Model id -> ( Model id, Maybe msg )
 update configs msg ({ state } as model) =
     case ( state, msg ) of
         ( Inactive, MouseDown id pos ) ->
@@ -150,14 +136,14 @@ update configs msg ({ state } as model) =
                 | state = Selecting id pos
                 , activeItem = Just id
               }
-            , Cmd.none
+            , Nothing
             )
 
         ( Selecting id pos, DragItem newPos ) ->
             ( { model
                 | state = Dragging id pos newPos
               }
-            , Cmd.none
+            , Nothing
             )
 
         ( Selecting id pos, MouseUp ) ->
@@ -165,14 +151,14 @@ update configs msg ({ state } as model) =
                 | state = Inactive
                 , activeItem = Nothing
               }
-            , Cmd.none
+            , Nothing
             )
 
         ( Dragging id pos _, DragItem newPos ) ->
             ( { model
                 | state = Dragging id pos newPos
               }
-            , Cmd.none
+            , Nothing
             )
 
         ( Dragging id oldPos newPos, MouseUp ) ->
@@ -184,7 +170,7 @@ update configs msg ({ state } as model) =
             )
 
         _ ->
-            ( model, Cmd.none )
+            ( model, Nothing )
 
 
 positionDecoder : Decoder Position

@@ -123,7 +123,6 @@ type FrontendMsg
     | PlaceItemOnCanvas Float Float
     | UpdateItemTransform String Float Float Float Float
     | Canvas CanvasMsg
-    | OnDragEnd String Moveable.Delta
     | NoOpFrontendMsg
 
 
