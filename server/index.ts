@@ -58,9 +58,9 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Socket.io connection handling
 io.on('connection', (socket: CustomSocket) => {
   const sessionId = socket.id;
-  
+
   console.log(`Client connected: ${sessionId}`);
-  
+
   // Send initial data
   const session = getSession(sessionId);
   socket.emit('toFrontend', {
@@ -72,6 +72,11 @@ io.on('connection', (socket: CustomSocket) => {
   // Handle messages from frontend
   socket.on('toBackend', (msg: ToBackend) => {
     handleBackendMessage(socket, sessionId, msg);
+  });
+
+  socket.on('clearCanvas', () => {
+    canvasItems = [];
+    socket.emit('canvasItems', canvasItems);
   });
 
   socket.on('disconnect', () => {
@@ -159,10 +164,7 @@ function handleBackendMessage(socket: CustomSocket, sessionId: string, msg: ToBa
     }
 
     case 'getCanvas': {
-      socket.emit('toFrontend', {
-        type: 'canvasReceived',
-        canvasItems: canvasItems
-      } as ToFrontend);
+      socket.emit('canvasItems', canvasItems);
       break;
     }
 

@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Socket } from 'socket.io-client';
-import { FrontendModel, ToBackend, ToFrontend } from '../types';
+import { FrontendModel, ToBackend, ToFrontend, CanvasItem } from '../types';
 
 interface AppContextType {
   model: FrontendModel;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
   updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
+  getCanvas: () => void;
+  clearCanvas: () => void;
   sendToBackend: (msg: ToBackend) => void;
 }
 
@@ -168,10 +170,16 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       }
     };
 
+    const handleCanvasItems = (canvasItems: CanvasItem[]) => {
+      setModel(prev => ({ ...prev, canvasItems }));
+    }
+
     socket.on('toFrontend', handleToFrontend);
+    socket.on('canvasItems', handleCanvasItems);
 
     return () => {
       socket.off('toFrontend', handleToFrontend);
+      socket.off('canvasItems', handleCanvasItems);
     };
   }, [socket]);
 
@@ -181,12 +189,16 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     }
   };
 
+  const getCanvas = () => socket?.emit('getCanvas');
+
+  const clearCanvas = () => socket?.emit('clearCanvas');
+
   const updateModel = (updater: (prev: FrontendModel) => FrontendModel): void => {
     setModel(updater);
   };
 
   return (
-    <AppContext.Provider value={{ model, setModel, updateModel, sendToBackend }}>
+    <AppContext.Provider value={{ model, setModel, updateModel, sendToBackend, getCanvas, clearCanvas }}>
       {children}
     </AppContext.Provider>
   );
