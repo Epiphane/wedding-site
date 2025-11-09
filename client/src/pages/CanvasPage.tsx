@@ -3,6 +3,7 @@ import Moveable from 'react-moveable';
 import type {
     OnDrag,
     OnDragEnd,
+    OnDragStart,
     OnResize,
     OnResizeEnd,
     OnRotate,
@@ -15,10 +16,9 @@ import Footer from '../components/Footer';
 import Card from '../components/Card';
 import { CanvasItem, FrontendModel } from '../types';
 
-interface CanvasItemProps {
+interface CanvasItemProps extends React.DOMAttributes<HTMLDivElement> {
     item: CanvasItem;
     isActive: boolean;
-    onClick: () => void;
 }
 
 interface CanvasControlsProps {
@@ -36,14 +36,16 @@ export default function CanvasPage(): JSX.Element {
     model.canvasItems.forEach(i => dict.set(i.id, i));
     model.canvasItems = [...dict.values()];
 
-    console.log('render', model.canvasItems)
+    //console.log('render', model.canvasItems)
     useEffect(() => {
         getCanvas();
     }, [getCanvas]);
     //return (<div></div>);
 
     const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
-        console.log(e);
+        if (activeItemId !== null) {
+            return;
+        }
         // Only place item if clicking on the canvas background, not on an item
         if ((e.target as HTMLElement).id === 'canvas-background' || (e.target as HTMLElement).id === 'canvas-inner') {
             const innerCanvas = document.getElementById('canvas-background');
@@ -77,11 +79,18 @@ export default function CanvasPage(): JSX.Element {
         }));
     };
 
+    const handleDragStart = (itemId: string) => (e: OnDragStart) => {
+        const item = model.canvasItems.find(item => item.id === itemId);
+        if (item) {
+            console.log('drag', item);
+        }
+    };
+
     const handleDrag = (itemId: string) => (e: OnDrag) => {
         const item = model.canvasItems.find(item => item.id === itemId);
         if (item) {
-            const newX = item.x + e.beforeTranslate[0];
-            const newY = item.y + e.beforeTranslate[1];
+            const newX = e.left;
+            const newY = e.top;
 
             updateModel(prev => ({
                 ...prev,
@@ -261,6 +270,7 @@ export default function CanvasPage(): JSX.Element {
                                         item={item}
                                         isActive={activeItemId === item.id}
                                         onClick={() => setActiveItemId(item.id)}
+                                        onMouseDown={() => setActiveItemId(item.id)}
                                     />
                                     {activeItemId === item.id && itemRef.current && (
                                         <Moveable
@@ -276,6 +286,7 @@ export default function CanvasPage(): JSX.Element {
                                             throttleRotate={0}
                                             edge={false}
                                             origin={false}
+                                            onDragStart={handleDragStart(item.id)}
                                             onDrag={handleDrag(item.id)}
                                             onDragEnd={handleDragEnd(item.id)}
                                             onResize={handleResize(item.id)}
@@ -297,17 +308,15 @@ export default function CanvasPage(): JSX.Element {
 }
 
 const CanvasItemComponent = React.forwardRef<HTMLDivElement, CanvasItemProps>(
-    ({ item, isActive, onClick }, ref) => {
+    ({ item, isActive, onClick, onMouseDown }, ref) => {
         const content = item.itemType.type === 'sticker' ? item.itemType.value : item.itemType.value;
         const fontSize = item.itemType.type === 'sticker' ? '48px' : '18px';
 
         return (
             <div
                 ref={ref}
-                onClick={(e: MouseEvent<HTMLDivElement>) => {
-                    e.stopPropagation();
-                    onClick();
-                }}
+                onClick={onClick}
+                onMouseDown={onMouseDown}
                 style={{
                     position: 'absolute',
                     left: `${item.x}px`,
