@@ -138,29 +138,11 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
           }));
           break;
 
-        case 'canvasItemMoved':
+        case 'canvasItemUpdated':
           setModel(prev => ({
             ...prev,
             canvasItems: prev.canvasItems.map(item =>
-              item.id === msg.itemId ? { ...item, x: msg.x, y: msg.y } : item
-            )
-          }));
-          break;
-
-        case 'canvasItemRotated':
-          setModel(prev => ({
-            ...prev,
-            canvasItems: prev.canvasItems.map(item =>
-              item.id === msg.itemId ? { ...item, rotation: msg.rotation } : item
-            )
-          }));
-          break;
-
-        case 'canvasItemScaled':
-          setModel(prev => ({
-            ...prev,
-            canvasItems: prev.canvasItems.map(item =>
-              item.id === msg.itemId ? { ...item, scale: msg.scale } : item
+              item.id === msg.item.id ? { ...item, ...msg.item } : item
             )
           }));
           break;

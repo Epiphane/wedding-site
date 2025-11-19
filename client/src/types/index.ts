@@ -84,9 +84,7 @@ export type ToBackend =
   | { type: 'addOrUpdateGuest'; guest: Guest }
   | { type: 'deleteGuestByEmail'; email: string }
   | { type: 'placeCanvasItem'; item: CanvasItem }
-  | { type: 'updateCanvasItemPosition'; itemId: string; x: number; y: number }
-  | { type: 'updateCanvasItemRotation'; itemId: string; rotation: number }
-  | { type: 'updateCanvasItemScale'; itemId: string; scale: number }
+  | { type: 'updateCanvasItem'; item: CanvasItem }
   | { type: 'getCanvas' };
 
 export type ToFrontend =
@@ -102,7 +100,5 @@ export type ToFrontend =
   | { type: 'guestDeleted' }
   | { type: 'canvasReceived'; canvasItems: CanvasItem[] }
   | { type: 'canvasItemPlaced'; item: CanvasItem }
-  | { type: 'canvasItemMoved'; itemId: string; x: number; y: number }
-  | { type: 'canvasItemRotated'; itemId: string; rotation: number }
-  | { type: 'canvasItemScaled'; itemId: string; scale: number }
+  | { type: 'canvasItemUpdated'; item: CanvasItem }
   | { type: 'noOpToFrontend' };

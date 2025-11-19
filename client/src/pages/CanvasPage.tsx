@@ -1,24 +1,15 @@
-import React, { useEffect, useState, useRef, MouseEvent, ChangeEvent } from 'react';
+import React, { useEffect, ChangeEvent, MouseEventHandler, TouchEventHandler } from 'react';
 import Moveable from 'react-moveable';
-import type {
-    OnDrag,
-    OnDragEnd,
-    OnDragStart,
-    OnResize,
-    OnResizeEnd,
-    OnRotate,
-    OnRotateEnd
-} from 'react-moveable';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
 import { CanvasItem, FrontendModel } from '../types';
+import throttle from "lodash/throttle";
 
-interface CanvasItemProps extends React.DOMAttributes<HTMLDivElement> {
+interface CanvasItemProps extends React.HTMLAttributes<HTMLDivElement> {
     item: CanvasItem;
-    isActive: boolean;
 }
 
 interface CanvasControlsProps {
@@ -29,34 +20,14 @@ interface CanvasControlsProps {
 
 export default function CanvasPage(): JSX.Element {
     const { model, updateModel, sendToBackend, getCanvas, clearCanvas } = useApp();
-    const [activeItemId, setActiveItemId] = useState<string | null>(null);
-    const itemRefs = useRef<{ [key: string]: React.RefObject<HTMLDivElement> }>({});
+    const moveableRef = React.useRef<Moveable>(null);
+    const [target, setTarget] = React.useState<string>("");
+    const targetItem = () => {
+        const parts = target.split('-');
+        return parts.length === 2 && parts[0] === '#sticker' ? parts[1] : null;
+    }
 
-    let dict = new Map<string, CanvasItem>();
-    model.canvasItems.forEach(i => dict.set(i.id, i));
-    model.canvasItems = [...dict.values()];
-
-    //console.log('render', model.canvasItems)
-    useEffect(() => {
-        getCanvas();
-    }, [getCanvas]);
-    //return (<div></div>);
-
-    const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
-        if (activeItemId !== null) {
-            return;
-        }
-        // Only place item if clicking on the canvas background, not on an item
-        if ((e.target as HTMLElement).id === 'canvas-background' || (e.target as HTMLElement).id === 'canvas-inner') {
-            const innerCanvas = document.getElementById('canvas-background');
-            if (innerCanvas) {
-                const rect = innerCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                placeItem(x, y);
-            }
-        }
-    };
+    useEffect(() => { getCanvas(); }, [getCanvas]);
 
     const placeItem = (x: number, y: number) => {
         const item: CanvasItem = {
@@ -79,146 +50,81 @@ export default function CanvasPage(): JSX.Element {
         }));
     };
 
-    const handleDragStart = (itemId: string) => (e: OnDragStart) => {
-        const item = model.canvasItems.find(item => item.id === itemId);
+    const updateCurrentItem = (updateFn: (item: CanvasItem) => CanvasItem) => {
+        const currentItemId = targetItem();
+        updateModel(prev => ({
+            ...prev,
+            canvasItems: prev.canvasItems.map(canvasItem =>
+                canvasItem.id === currentItemId ? updateFn(canvasItem) : canvasItem
+            )
+        }));
+    }
+
+    const saveCurrentItem = () => {
+        const currentItemId = targetItem();
+        const item = model.canvasItems.find(item => item.id === currentItemId);
         if (item) {
-            console.log('drag', item);
+            sendToBackend({
+                type: 'updateCanvasItem',
+                item
+            });
         }
-    };
+    }
 
-    const handleDrag = (itemId: string) => (e: OnDrag) => {
-        const item = model.canvasItems.find(item => item.id === itemId);
-        if (item) {
-            const newX = e.left;
-            const newY = e.top;
+    // const throttleFunction = (callback: Function, frequency: number) => {
+    const ref = React.useRef<Function>();
 
-            updateModel(prev => ({
-                ...prev,
-                canvasItems: prev.canvasItems.map(canvasItem =>
-                    canvasItem.id === itemId
-                        ? { ...canvasItem, x: newX, y: newY }
-                        : canvasItem
-                )
-            }));
+    useEffect(() => {
+        ref.current = saveCurrentItem;
+    }, [saveCurrentItem]);
 
-            // Update transform while dragging
-            e.target.style.left = `${newX}px`;
-            e.target.style.top = `${newY}px`;
-        }
-    };
+    const throttleSave = React.useMemo(() => {
+        const func = () => {
+            ref.current?.();
+        };
 
-    const handleDragEnd = (itemId: string) => (e: OnDragEnd) => {
-        if (e.lastEvent) {
-            const item = model.canvasItems.find(item => item.id === itemId);
-            if (item) {
-                sendToBackend({
-                    type: 'updateCanvasItemPosition',
-                    itemId: itemId,
-                    x: item.x,
-                    y: item.y
-                });
+        return throttle(func, 100);
+    }, []);
+
+    //     return debouncedCallback;
+    // };
+
+    // const throttleSave = throttleFunction(saveCurrentItem, 1000);
+
+    const handleTouchMove = (e: TouchEvent) => {
+        // console.log(e);
+    }
+
+    const handlePinch = (e: any) => {
+        console.log(e);
+    }
+
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // This prevents the default pull-to-refresh behavior
+        // container.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+        // Prevent zooming with more than one finger
+        container.addEventListener('touchstart', function (e) {
+            console.log(e);
+            if (e.touches.length > 1) {
+                e.preventDefault(); // Prevent zoom
             }
-        }
-    };
+        }, { passive: false });
 
-    const handleResize = (itemId: string) => (e: OnResize) => {
-        const item = model.canvasItems.find(item => item.id === itemId);
-        if (item) {
-            // Calculate scale based on width (assuming base width of 50px)
-            const baseSize = 50;
-            const newScale = Math.max(0.5, Math.min(2.0, e.width / baseSize));
+        // Prevent pinch zooming with gestures
+        container.addEventListener('gesturestart', function (e) {
+            console.log(e);
+            e.preventDefault(); // Prevent zoom gesture
+        }, { passive: false });
 
-            // Update position if dragged during resize
-            const newX = e.drag ? item.x + e.drag.beforeTranslate[0] : item.x;
-            const newY = e.drag ? item.y + e.drag.beforeTranslate[1] : item.y;
-
-            updateModel(prev => ({
-                ...prev,
-                canvasItems: prev.canvasItems.map(canvasItem =>
-                    canvasItem.id === itemId
-                        ? {
-                            ...canvasItem,
-                            x: newX,
-                            y: newY,
-                            scale: newScale
-                        }
-                        : canvasItem
-                )
-            }));
-
-            // Update element dimensions
-            e.target.style.width = `${e.width}px`;
-            e.target.style.height = `${e.height}px`;
-            e.target.style.left = `${newX}px`;
-            e.target.style.top = `${newY}px`;
-        }
-    };
-
-    const handleResizeEnd = (itemId: string) => (e: OnResizeEnd) => {
-        if (e.lastEvent) {
-            const item = model.canvasItems.find(item => item.id === itemId);
-            if (item) {
-                sendToBackend({
-                    type: 'updateCanvasItemPosition',
-                    itemId: itemId,
-                    x: item.x,
-                    y: item.y
-                });
-                sendToBackend({
-                    type: 'updateCanvasItemScale',
-                    itemId: itemId,
-                    scale: item.scale
-                });
-            }
-        }
-    };
-
-    const handleRotate = (itemId: string) => (e: OnRotate) => {
-        const item = model.canvasItems.find(item => item.id === itemId);
-        if (item) {
-            // Update position if dragged during rotate
-            const newX = e.drag ? item.x + e.drag.beforeTranslate[0] : item.x;
-            const newY = e.drag ? item.y + e.drag.beforeTranslate[1] : item.y;
-
-            updateModel(prev => ({
-                ...prev,
-                canvasItems: prev.canvasItems.map(canvasItem =>
-                    canvasItem.id === itemId
-                        ? {
-                            ...canvasItem,
-                            x: newX,
-                            y: newY,
-                            rotation: e.rotation
-                        }
-                        : canvasItem
-                )
-            }));
-
-            // Update transform
-            e.target.style.left = `${newX}px`;
-            e.target.style.top = `${newY}px`;
-            e.target.style.transform = `rotate(${e.rotation}deg) scale(${item.scale})`;
-        }
-    };
-
-    const handleRotateEnd = (itemId: string) => (e: OnRotateEnd) => {
-        if (e.lastEvent) {
-            const item = model.canvasItems.find(item => item.id === itemId);
-            if (item) {
-                sendToBackend({
-                    type: 'updateCanvasItemPosition',
-                    itemId: itemId,
-                    x: item.x,
-                    y: item.y
-                });
-                sendToBackend({
-                    type: 'updateCanvasItemRotation',
-                    itemId: itemId,
-                    rotation: item.rotation
-                });
-            }
-        }
-    };
+        return () => {
+            container.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, []);
 
     return (
         <div>
@@ -236,18 +142,27 @@ export default function CanvasPage(): JSX.Element {
                     padding: '20px'
                 }}
             >
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: '300px 1fr',
-                        gap: '20px',
-                        alignItems: 'start'
-                    }}
-                >
+                <div className="canvas-page">
                     <CanvasControls model={model} updateModel={updateModel} onClear={clearCanvas} />
                     <div
+                        ref={containerRef}
                         id="canvas-background"
-                        onClick={handleCanvasClick}
+                        onMouseUp={e => {
+                            const moveable = moveableRef.current;
+                            if (!moveable || moveable.isDragging()) {
+                                return;
+                            }
+                            // Only place item if clicking on the canvas background, not on an item
+                            if ((e.target as HTMLElement).id === 'canvas-background') {
+                                const innerCanvas = document.getElementById('canvas-background');
+                                if (innerCanvas) {
+                                    const rect = innerCanvas.getBoundingClientRect();
+                                    const x = e.clientX - rect.left;
+                                    const y = e.clientY - rect.top;
+                                    placeItem(x, y);
+                                }
+                            }
+                        }}
                         style={{
                             background: '#eee',
                             width: '100%',
@@ -257,44 +172,62 @@ export default function CanvasPage(): JSX.Element {
                             cursor: 'crosshair'
                         }}
                     >
+                        <Moveable
+                            ref={moveableRef}
+                            target={target}
+                            container={document.getElementById('canvas-inner')}
+                            draggable={true}
+                            rotatable={true}
+                            scalable={true}
+                            keepRatio={true}
+                            edge={true}
+                            origin={false}
+                            onDrag={e => {
+                                updateCurrentItem(item => ({
+                                    ...item,
+                                    x: e.translate[0],
+                                    y: e.translate[1],
+                                }));
+                                throttleSave();
+                            }}
+                            onDragEnd={saveCurrentItem}
+                            onScale={e => {
+                                updateCurrentItem(item => ({
+                                    ...item,
+                                    x: e.drag.beforeTranslate[0],
+                                    y: e.drag.beforeTranslate[1],
+                                    scale: e.scale[0]
+                                }));
+                                throttleSave();
+                            }}
+                            onScaleEnd={saveCurrentItem}
+                            onRotate={e => {
+                                updateCurrentItem(item => ({
+                                    ...item,
+                                    rotation: e.rotation
+                                }));
+                                throttleSave();
+                            }}
+                            onRotateEnd={saveCurrentItem}
+                        />
                         {model.canvasItems.map(item => {
-                            if (!itemRefs.current[item.id]) {
-                                itemRefs.current[item.id] = React.createRef<HTMLDivElement>();
+                            const handleTouchStart = (e: React.MouseEvent | React.TouchEvent) => {
+                                const moveable = moveableRef.current;
+                                if (moveable && !moveable.isDragging()) {
+                                    setTarget(`#sticker-${item.id}`)
+                                    moveable.waitToChangeTarget().then(() => {
+                                        moveable.dragStart(e.nativeEvent);
+                                    });
+                                }
                             }
-                            const itemRef = itemRefs.current[item.id];
-
                             return (
                                 <React.Fragment key={item.id}>
                                     <CanvasItemComponent
-                                        ref={itemRef}
+                                        id={`sticker-${item.id}`}
                                         item={item}
-                                        isActive={activeItemId === item.id}
-                                        onClick={() => setActiveItemId(item.id)}
-                                        onMouseDown={() => setActiveItemId(item.id)}
+                                        onTouchStart={handleTouchStart}
+                                        onMouseDown={handleTouchStart}
                                     />
-                                    {activeItemId === item.id && itemRef.current && (
-                                        <Moveable
-                                            target={itemRef.current}
-                                            container={document.getElementById('canvas-inner')}
-                                            draggable={true}
-                                            resizable={true}
-                                            rotatable={true}
-                                            scalable={false}
-                                            keepRatio={false}
-                                            throttleDrag={0}
-                                            throttleResize={0}
-                                            throttleRotate={0}
-                                            edge={false}
-                                            origin={false}
-                                            onDragStart={handleDragStart(item.id)}
-                                            onDrag={handleDrag(item.id)}
-                                            onDragEnd={handleDragEnd(item.id)}
-                                            onResize={handleResize(item.id)}
-                                            onResizeEnd={handleResizeEnd(item.id)}
-                                            onRotate={handleRotate(item.id)}
-                                            onRotateEnd={handleRotateEnd(item.id)}
-                                        />
-                                    )}
                                 </React.Fragment>
                             );
                         })}
@@ -308,20 +241,17 @@ export default function CanvasPage(): JSX.Element {
 }
 
 const CanvasItemComponent = React.forwardRef<HTMLDivElement, CanvasItemProps>(
-    ({ item, isActive, onClick, onMouseDown }, ref) => {
+    ({ item, ...props }, ref) => {
         const content = item.itemType.type === 'sticker' ? item.itemType.value : item.itemType.value;
         const fontSize = item.itemType.type === 'sticker' ? '48px' : '18px';
 
         return (
             <div
                 ref={ref}
-                onClick={onClick}
-                onMouseDown={onMouseDown}
+                {...props}
                 style={{
                     position: 'absolute',
-                    left: `${item.x}px`,
-                    top: `${item.y}px`,
-                    transform: `rotate(${item.rotation}deg) scale(${item.scale})`,
+                    transform: `translate(${item.x}px, ${item.y}px) rotate(${item.rotation}deg) scale(${item.scale})`,
                     transformOrigin: 'center center',
                     fontSize: fontSize,
                     fontFamily: "'Georgia', 'Times New Roman', serif",
@@ -329,8 +259,7 @@ const CanvasItemComponent = React.forwardRef<HTMLDivElement, CanvasItemProps>(
                     maxWidth: '300px',
                     cursor: 'move',
                     userSelect: 'none',
-                    padding: '4px',
-                    border: isActive ? '2px solid #4af' : 'none',
+                    lineHeight: '1',
                     width: '50px',
                     height: '50px',
                     display: 'flex',
@@ -371,7 +300,7 @@ function CanvasControls({ model, updateModel, onClear }: CanvasControlsProps): J
     };
 
     return (
-        <div>
+        <div className="canvas-controls">
             <Card style={{ marginBottom: '20px' }}>
                 <button
                     style={{

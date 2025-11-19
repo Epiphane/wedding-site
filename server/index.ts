@@ -173,47 +173,19 @@ function handleBackendMessage(socket: CustomSocket, sessionId: string, msg: ToBa
       canvasItems.push(item);
       io.emit('toFrontend', {
         type: 'canvasItemPlaced',
-        item: item
+        item
       } as ToFrontend);
       break;
     }
 
-    case 'updateCanvasItemPosition': {
-      const { itemId, x, y } = msg;
-      canvasItems = canvasItems.map(item =>
-        item.id === itemId ? { ...item, x, y } : item
+    case 'updateCanvasItem': {
+      const item = msg.item;
+      canvasItems = canvasItems.map(prev =>
+        prev.id === item.id ? { ...prev, ...item } : prev
       );
       io.emit('toFrontend', {
-        type: 'canvasItemMoved',
-        itemId,
-        x,
-        y
-      } as ToFrontend);
-      break;
-    }
-
-    case 'updateCanvasItemRotation': {
-      const { itemId, rotation } = msg;
-      canvasItems = canvasItems.map(item =>
-        item.id === itemId ? { ...item, rotation } : item
-      );
-      io.emit('toFrontend', {
-        type: 'canvasItemRotated',
-        itemId,
-        rotation
-      } as ToFrontend);
-      break;
-    }
-
-    case 'updateCanvasItemScale': {
-      const { itemId, scale } = msg;
-      canvasItems = canvasItems.map(item =>
-        item.id === itemId ? { ...item, scale } : item
-      );
-      io.emit('toFrontend', {
-        type: 'canvasItemScaled',
-        itemId,
-        scale
+        type: 'canvasItemUpdated',
+        item
       } as ToFrontend);
       break;
     }

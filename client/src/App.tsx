@@ -10,7 +10,7 @@ import AdminPage from './pages/AdminPage';
 import CanvasPage from './pages/CanvasPage';
 import { AppProvider } from './context/AppContext';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
 function App(): JSX.Element {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -29,7 +29,11 @@ function App(): JSX.Element {
   }
 
   return (
-    <Router>
+    <Router
+      future={{
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      }}>
       <AppProvider socket={socket}>
         <Routes>
           <Route path="/" element={<HomePage />} />

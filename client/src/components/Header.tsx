@@ -29,16 +29,7 @@ export default function Header({ weddingDate, venue, coupleNames }: HeaderProps)
           padding: '40px 20px 20px'
         }}
       >
-        <h1
-          style={{
-            fontFamily: "'Georgia', 'Times New Roman', serif",
-            fontSize: '3em',
-            fontWeight: '400',
-            margin: '0',
-            color: '#333',
-            letterSpacing: '1px'
-          }}
-        >
+        <h1 className="name-banner">
           {name1} & {name2}
         </h1>
       </div>
