@@ -1,10 +1,5 @@
 import { Socket } from 'socket.io';
-
-export interface Guest {
-  name: string;
-  email: string;
-  plusOne: boolean;
-}
+import Guest from './model/guest';
 
 export interface SessionInfo {
   name: string;

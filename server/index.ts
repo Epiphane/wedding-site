@@ -1,10 +1,10 @@
-import express, { Request, Response } from 'express';
+import Koa, { Context } from 'koa';
+import Router from 'koa-router';
+import bodyParser from 'koa-bodyparser';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import {
-  Guest,
   SessionInfo,
   RsvpResponse,
   CanvasItem,
@@ -13,19 +13,44 @@ import {
   CustomSocket
 } from './types';
 
+import { DataSource } from "typeorm";
+import { development } from './db-settings';
+import GuestRouter from './routes';
+import Guest from './model/guest';
+import RSVP from './model/rsvp';
+import { SwaggerRouter } from 'koa-swagger-decorator';
+
 dotenv.config();
 
-const app = express();
-const server = http.createServer(app);
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
-});
+const AppDataSource = new DataSource({
+  ...development,
+  entities: [Guest, RSVP],
+})
 
-app.use(cors());
-app.use(express.json());
+AppDataSource.initialize()
+  .then(async connection => {
+    connection.setOptions({ logging: ['query'] })
+
+    const app = new Koa()
+    app.use(bodyParser())
+    app.use(GuestRouter.routes()).use(GuestRouter.allowedMethods());
+
+    const server = http.createServer(app.callback());
+    const io = new SocketIOServer(server, {
+      cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        methods: ["GET", "POST"]
+      }
+    });
+
+    const PORT = process.env.PORT || 3001;
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(error => console.log("ERROR: ", error));
+
+/*
 
 // In-memory storage (similar to Elm Dict)
 const guests = new Map<string, Guest>();
@@ -34,11 +59,11 @@ const sessions = new Map<string, SessionInfo>();
 let canvasItems: CanvasItem[] = [];
 
 // Initialize with default guest
-guests.set('thomas steinke', {
-  name: 'Thomas Steinke',
-  email: 'exyphnos@gmail.com',
-  plusOne: true
-});
+// guests.set('thomas steinke', {
+//   name: 'Thomas Steinke',
+//   email: 'exyphnos@gmail.com',
+//   plusOne: true
+// });
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'thomas';
 
@@ -49,11 +74,6 @@ function getSession(sessionId: string): SessionInfo {
   }
   return sessions.get(sessionId)!;
 }
-
-// REST API endpoints
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok' });
-});
 
 // Socket.io connection handling
 io.on('connection', (socket: CustomSocket) => {
@@ -154,10 +174,10 @@ function handleBackendMessage(socket: CustomSocket, sessionId: string, msg: ToBa
     case 'deleteGuestByEmail': {
       const email = msg.email;
       for (const [key, guest] of guests.entries()) {
-        if (guest.email === email) {
-          guests.delete(key);
-          break;
-        }
+        // if (guest.email === email) {
+        //   guests.delete(key);
+        //   break;
+        // }
       }
       socket.emit('toFrontend', { type: 'guestDeleted' } as ToFrontend);
       break;
@@ -195,7 +215,4 @@ function handleBackendMessage(socket: CustomSocket, sessionId: string, msg: ToBa
   }
 }
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+*/
