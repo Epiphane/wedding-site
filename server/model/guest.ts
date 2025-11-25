@@ -1,11 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOne } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOne, OneToMany } from "typeorm"
 import RSVP from "./rsvp"
 import { IsEmail, IsString } from "class-validator"
+import Sticker from "./sticker"
 
 @Entity()
 export default class Guest extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id: number
+  @PrimaryGeneratedColumn("uuid")
+  id: string
 
   @Column()
   @IsString()
@@ -18,4 +19,8 @@ export default class Guest extends BaseEntity {
   @OneToOne(() => RSVP)
   @JoinColumn()
   response: RSVP
+
+  @OneToMany(() => Sticker, (sticker) => sticker.owner)
+  @JoinColumn()
+  stickers: Sticker[];
 }

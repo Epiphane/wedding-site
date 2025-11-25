@@ -33,10 +33,8 @@ export default class GuestController {
   @summary("Find guest by id")
   @path(guestId)
   public static async getGuest(ctx: Context): Promise<void> {
-    const guest = await Guest.findOne({
-      where: {
-        id: +ctx.params.id || 0
-      }
+    const guest = await Guest.findOneBy({
+      id: ctx.params.id
     });
 
     if (guest) {
@@ -71,7 +69,7 @@ export default class GuestController {
   @path(guestId)
   @body(guestSchema)
   public static async updateGuest(ctx: Context): Promise<void> {
-    const guest: Guest = await Guest.findOneByOrFail({ id: +ctx.params.id || 0 });
+    const guest: Guest = await Guest.findOneByOrFail({ id: ctx.params.id });
     guest.name = (ctx.request.body as any).name;
     guest.email = (ctx.request.body as any).email;
     await validateOrReject(guest);
@@ -92,7 +90,7 @@ export default class GuestController {
   @summary("Delete guest by id")
   @path(guestId)
   public static async deleteGuest(ctx: Context): Promise<void> {
-    const guestToRemove: Guest = await Guest.findOneByOrFail({ id: +ctx.params.id || 0 });
+    const guestToRemove: Guest = await Guest.findOneByOrFail({ id: ctx.params.id });
     if (!guestToRemove) {
       ctx.status = 404;
       ctx.body = "The guest you are trying to delete doesn't exist in the db";

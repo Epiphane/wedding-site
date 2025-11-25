@@ -1,30 +1,21 @@
-import Koa, { Context } from 'koa';
-import Router from 'koa-router';
+import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import dotenv from 'dotenv';
-import {
-  SessionInfo,
-  RsvpResponse,
-  CanvasItem,
-  ToBackend,
-  ToFrontend,
-  CustomSocket
-} from './types';
 
 import { DataSource } from "typeorm";
 import { development } from './db-settings';
 import GuestRouter from './routes';
 import Guest from './model/guest';
 import RSVP from './model/rsvp';
-import { SwaggerRouter } from 'koa-swagger-decorator';
+import Sticker from './model/sticker';
 
 dotenv.config();
 
 const AppDataSource = new DataSource({
   ...development,
-  entities: [Guest, RSVP],
+  entities: [Guest, RSVP, Sticker],
 })
 
 AppDataSource.initialize()
