@@ -10,6 +10,8 @@ import GuestRouter from './routes';
 import Guest from './model/guest';
 import RSVP from './model/rsvp';
 import Sticker from './model/sticker';
+import RSVPRouter from './routes/rsvp';
+import DataSeeder from './seed/seed';
 
 dotenv.config();
 
@@ -20,6 +22,11 @@ const AppDataSource = new DataSource({
 
 AppDataSource.initialize()
   .then(async connection => {
+    const numGuests = await Guest.count();
+    if (numGuests === 0) {
+      await new DataSeeder().run(connection);
+    }
+
     connection.setOptions({ logging: ['query'] })
 
     const app = new Koa()
