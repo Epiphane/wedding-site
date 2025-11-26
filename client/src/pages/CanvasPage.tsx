@@ -5,11 +5,12 @@ import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
-import { CanvasItem, FrontendModel } from '../types';
+import { FrontendModel } from '../types';
 import throttle from "lodash/throttle";
+import Sticker from '../../../server/model/sticker';
 
 interface CanvasItemProps extends React.HTMLAttributes<HTMLDivElement> {
-    item: CanvasItem;
+    item: Sticker;
 }
 
 interface CanvasControlsProps {
@@ -19,29 +20,25 @@ interface CanvasControlsProps {
 }
 
 export default function CanvasPage(): JSX.Element {
-    const { model, updateModel, sendToBackend, getCanvas, clearCanvas } = useApp();
+    const { model, guestInfo, updateModel, sendToBackend, canvas, setCanvas, clearCanvas } = useApp();
     const moveableRef = React.useRef<Moveable>(null);
     const [target, setTarget] = React.useState<string>("");
     const targetItem = () => {
         const parts = target.split('-');
-        return parts.length === 2 && parts[0] === '#sticker' ? parts[1] : null;
+        return parts.length === 2 && parts[0] === '#sticker' ? +parts[1] : -1;
     }
 
-    useEffect(() => { getCanvas(); }, [getCanvas]);
-
     const placeItem = (x: number, y: number) => {
-        const item: CanvasItem = {
-            id: String(Date.now()), // Use timestamp for unique ID
-            owner: model.sessionName,
-            itemType: model.textInput !== ''
-                ? { type: 'textBox', value: model.textInput }
-                : { type: 'sticker', value: model.selectedSticker },
+        const item: Partial<Sticker> = {
+            id: Date.now().valueOf(), // Use timestamp for unique ID
+            type: model.textInput !== '' ? 'text' : 'image',
+            content: model.textInput || model.selectedSticker,
             x: x - 25,
             y: y - 25,
             rotation: model.stickerRotation,
             scale: model.stickerScale
         };
-        sendToBackend({ type: 'placeCanvasItem', item });
+        sendToBackend('placeSticker', item);
         updateModel(prev => ({
             ...prev,
             textInput: '',
@@ -50,24 +47,17 @@ export default function CanvasPage(): JSX.Element {
         }));
     };
 
-    const updateCurrentItem = (updateFn: (item: CanvasItem) => CanvasItem) => {
+    const updateCurrentItem = (updateFn: (item: Sticker) => Partial<Sticker>) => {
         const currentItemId = targetItem();
-        updateModel(prev => ({
-            ...prev,
-            canvasItems: prev.canvasItems.map(canvasItem =>
-                canvasItem.id === currentItemId ? updateFn(canvasItem) : canvasItem
-            )
-        }));
+        const newCanvas = canvas.map(canvasItem => canvasItem.id === currentItemId ? updateFn(canvasItem) as Sticker : canvasItem);
+        setCanvas(newCanvas);
     }
 
     const saveCurrentItem = () => {
         const currentItemId = targetItem();
-        const item = model.canvasItems.find(item => item.id === currentItemId);
+        const item = canvas.find(item => item.id === currentItemId);
         if (item) {
-            sendToBackend({
-                type: 'updateCanvasItem',
-                item
-            });
+            sendToBackend('updateSticker', item);
         }
     }
 
@@ -210,7 +200,7 @@ export default function CanvasPage(): JSX.Element {
                             }}
                             onRotateEnd={saveCurrentItem}
                         />
-                        {model.canvasItems.map(item => {
+                        {canvas.map(item => {
                             const handleTouchStart = (e: React.MouseEvent | React.TouchEvent) => {
                                 const moveable = moveableRef.current;
                                 if (moveable && !moveable.isDragging()) {
@@ -242,8 +232,8 @@ export default function CanvasPage(): JSX.Element {
 
 const CanvasItemComponent = React.forwardRef<HTMLDivElement, CanvasItemProps>(
     ({ item, ...props }, ref) => {
-        const content = item.itemType.type === 'sticker' ? item.itemType.value : item.itemType.value;
-        const fontSize = item.itemType.type === 'sticker' ? '48px' : '18px';
+        const content = item.content;
+        const fontSize = item.type === 'image' ? '48px' : '18px';
 
         return (
             <div

@@ -9,18 +9,25 @@ import SchedulePage from './pages/SchedulePage';
 import AdminPage from './pages/AdminPage';
 import CanvasPage from './pages/CanvasPage';
 import { AppProvider } from './context/AppContext';
+import { ClientToServerEvents, ServerToClientEvents } from '../../shared/types';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
 function App(): JSX.Element {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL);
-    setSocket(newSocket);
+    const socket = io(SOCKET_URL);
+    socket.on('connect', () => {
+      setSocket(socket);
+    });
+
+    socket.on('disconnect', () => {
+      setSocket(null);
+    });
 
     return () => {
-      newSocket.close();
+      socket.close();
     };
   }, []);
 
@@ -35,14 +42,16 @@ function App(): JSX.Element {
         v7_startTransition: true,
       }}>
       <AppProvider socket={socket}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/rsvp" element={<RsvpPage />} />
-          <Route path="/travel" element={<TravelPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/canvas" element={<CanvasPage />} />
-        </Routes>
+        <React.StrictMode>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/rsvp" element={<RsvpPage />} />
+            <Route path="/travel" element={<TravelPage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/canvas" element={<CanvasPage />} />
+          </Routes>
+        </React.StrictMode>
       </AppProvider>
     </Router>
   );

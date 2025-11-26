@@ -1,6 +1,11 @@
 {
-  "watch": ["server"],
+  "watch": [
+    "server",
+    "shared"
+  ],
   "ext": "ts",
-  "ignore": ["server/**/*.spec.ts"],
+  "ignore": [
+    "server/**/*.spec.ts"
+  ],
   "exec": "ts-node server/index.ts"
 }

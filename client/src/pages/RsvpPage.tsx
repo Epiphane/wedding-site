@@ -22,7 +22,7 @@ export default function RsvpPage(): JSX.Element {
   };
 
   const handleLookupGuest = () => {
-    sendToBackend({ type: 'lookupGuestByName', name: model.rsvpName });
+    // sendToBackend({ type: 'lookupGuestByName', name: model.rsvpName });
   };
 
   const handleUpdateAttending = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -45,15 +45,15 @@ export default function RsvpPage(): JSX.Element {
 
   const handleSubmitRsvp = () => {
     if (model.rsvpStep === 'guestConfirmed' && model.confirmedGuest) {
-      const rsvp = {
-        guestName: model.confirmedGuest.name,
-        email: model.confirmedGuest.email,
-        attending: model.rsvpAttending,
-        plusOneName: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneName : null,
-        plusOneAttending: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneAttending : null
-      };
-      sendToBackend({ type: 'submitRsvpToBackend', rsvp });
-      updateModel(prev => ({ ...prev, rsvpSubmitted: true }));
+      // const rsvp = {
+      //   guestName: model.confirmedGuest.name,
+      //   email: model.confirmedGuest.email,
+      //   attending: model.rsvpAttending,
+      //   plusOneName: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneName : null,
+      //   plusOneAttending: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneAttending : null
+      // };
+      // // sendToBackend({ type: 'submitRsvpToBackend', rsvp });
+      // updateModel(prev => ({ ...prev, rsvpSubmitted: true }));
     }
   };
 
@@ -231,7 +231,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
             textAlign: 'center'
           }}
         >
-          Welcome, {guest.name}!
+          Welcome, {guest.firstName}!
         </div>
         <div style={{ marginBottom: '20px' }}>
           <label
@@ -260,7 +260,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
             <option value="notAttending">Sorry, can't make it</option>
           </select>
         </div>
-        {guest.plusOne && (
+        {guest.response.plusOne && (
           <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
             <label
               style={{

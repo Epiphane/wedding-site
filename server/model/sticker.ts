@@ -2,17 +2,13 @@ import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, ManyToOne } from "t
 import Guest from "./guest";
 import { IsNumber, IsString } from "class-validator";
 
-class Transform {
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
-}
-
 @Entity()
 export default class Sticker extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  ownerId: number;
 
   @ManyToOne(() => Guest, (guest) => guest.stickers)
   owner: Guest;

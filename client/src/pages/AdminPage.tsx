@@ -4,7 +4,8 @@ import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
-import { FrontendModel, Guest } from '../types';
+import { FrontendModel } from '../types';
+import Guest from '../../../server/model/guest';
 
 interface AdminLoginFormProps {
   model: FrontendModel;
@@ -30,7 +31,7 @@ export default function AdminPage(): JSX.Element {
 
   useEffect(() => {
     if (model.isAuthenticated) {
-      sendToBackend({ type: 'getGuestList' });
+      // sendToBackend({ type: 'getGuestList' });
     }
   }, [model.isAuthenticated, sendToBackend]);
 
@@ -55,7 +56,7 @@ export default function AdminPage(): JSX.Element {
         >
           <button
             onClick={() => {
-              sendToBackend({ type: 'logoutBackend' });
+              // sendToBackend({ type: 'logoutBackend' });
               updateModel(prev => ({ ...prev, isAuthenticated: false }));
             }}
             style={{
@@ -80,13 +81,13 @@ export default function AdminPage(): JSX.Element {
             updateModel={updateModel}
             sendToBackend={sendToBackend}
             onEdit={(guest) => {
-              updateModel(prev => ({
-                ...prev,
-                adminEditingGuest: guest,
-                adminFormName: guest.name,
-                adminFormEmail: guest.email,
-                adminFormPlusOne: guest.plusOne
-              }));
+              // updateModel(prev => ({
+              //   ...prev,
+              //   adminEditingGuest: guest,
+              //   adminFormName: guest.firstName,
+              //   adminFormEmail: guest.email,
+              //   adminFormPlusOne: guest.plusOne
+              // }));
             }}
           />
         </div>
@@ -207,19 +208,19 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
   };
 
   const handleSave = () => {
-    const guest: Guest = {
-      name: model.adminFormName,
-      email: model.adminFormEmail,
-      plusOne: model.adminFormPlusOne
-    };
-    sendToBackend({ type: 'addOrUpdateGuest', guest });
-    updateModel(prev => ({
-      ...prev,
-      adminFormName: '',
-      adminFormEmail: '',
-      adminFormPlusOne: false,
-      adminEditingGuest: null
-    }));
+    // const guest: Guest = {
+    //   name: model.adminFormName,
+    //   email: model.adminFormEmail,
+    //   plusOne: model.adminFormPlusOne
+    // };
+    // sendToBackend({ type: 'addOrUpdateGuest', guest });
+    // updateModel(prev => ({
+    //   ...prev,
+    //   adminFormName: '',
+    //   adminFormEmail: '',
+    //   adminFormPlusOne: false,
+    //   adminEditingGuest: null
+    // }));
   };
 
   const handleCancel = () => {
@@ -401,7 +402,10 @@ function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGue
           <thead>
             <tr style={{ background: '#f8f9fa' }}>
               <th style={{ textAlign: 'left', padding: '15px 20px', color: '#333', fontWeight: 'bold' }}>
-                Name
+                First Name
+              </th>
+              <th style={{ textAlign: 'left', padding: '15px 20px', color: '#333', fontWeight: 'bold' }}>
+                Last Name
               </th>
               <th style={{ textAlign: 'left', padding: '15px 20px', color: '#333', fontWeight: 'bold' }}>
                 Email
@@ -417,10 +421,11 @@ function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGue
           <tbody>
             {model.adminGuestList.map((guest, index) => (
               <tr key={index} style={{ borderTop: '1px solid #e9ecef' }}>
-                <td style={{ padding: '15px 20px' }}>{guest.name}</td>
+                <td style={{ padding: '15px 20px' }}>{guest.firstName}</td>
+                <td style={{ padding: '15px 20px' }}>{guest.lastName}</td>
                 <td style={{ padding: '15px 20px', color: '#666' }}>{guest.email}</td>
                 <td style={{ padding: '15px 20px', textAlign: 'center' }}>
-                  {guest.plusOne ? '✓' : '✗'}
+                  {guest.response.plusOne ? '✓' : '✗'}
                 </td>
                 <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                   <button

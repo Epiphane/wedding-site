@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useDebugValue, useReducer } from 'react';
 import { Socket } from 'socket.io-client';
-import { FrontendModel, ToBackend, ToFrontend, CanvasItem } from '../types';
+import { FrontendModel } from '../types';
+import { ClientToServerEvents, ServerToClientEvents } from '../../../shared/types';
+import useLocalStorage from '../utils/useLocalStorage';
+import Guest from '../../../server/model/guest';
+import Sticker from '../../../server/model/sticker';
+import canvasReducer from '../types/canvas';
+
+const BACKEND_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
 interface AppContextType {
+  request: (apiUrl: string, init?: RequestInit) => Promise<Response>;
   model: FrontendModel;
+  guestInfo: Guest | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
   updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
-  getCanvas: () => void;
+  canvas: Sticker[];
+  setCanvas: (items: Sticker[]) => void;
   clearCanvas: () => void;
-  sendToBackend: (msg: ToBackend) => void;
+  sendToBackend: <K extends keyof ClientToServerEvents>(msg: K, ...args: Parameters<ClientToServerEvents[K]>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -23,7 +33,7 @@ export function useApp(): AppContextType {
 
 interface AppProviderProps {
   children: ReactNode;
-  socket: Socket;
+  socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 }
 
 export function AppProvider({ children, socket }: AppProviderProps): JSX.Element {
@@ -47,140 +57,85 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     adminFormName: '',
     adminFormEmail: '',
     adminFormPlusOne: false,
-    canvasItems: [],
     selectedSticker: '❤️',
     textInput: '',
     stickerRotation: 0,
     stickerScale: 1.0,
-    draggingItemId: null,
-    canvas: {
-      items: [],
-      moveable: { state: 'inactive', activeItem: null }
-    }
   });
 
+  const request = (apiUrl: string, init?: RequestInit) => fetch(BACKEND_URL + '/api' + apiUrl, init);
+
+  const [canvas2, modifyCanvas] = useReducer(canvasReducer, [])
+
+  const [canvas, setCanvas] = useState<Sticker[]>([]);
+  const [myName, setMyName] = useLocalStorage<string>('guestName');
+  const [guestInfo, setGuestInfo] = useState<Guest>();
+
   useEffect(() => {
-    if (!socket) return;
+    if (socket && myName) {
+      socket.emitWithAck('setIdentity', myName).then(info => {
+        setGuestInfo(info);
+      })
+    }
+  }, [socket, myName])
 
-    // Send initial request
-    socket.emit('toBackend', { type: 'getBackendModel' });
+  useEffect(() => {
+    if (!socket) { return; }
 
-    // Handle messages from backend
-    const handleToFrontend = (msg: ToFrontend) => {
-      switch (msg.type) {
-        case 'guestFound':
-          setModel(prev => ({
-            ...prev,
-            rsvpStep: 'guestConfirmed',
-            confirmedGuest: msg.guest
-          }));
-          break;
-
-        case 'guestNotFoundResponse':
-          setModel(prev => ({ ...prev, rsvpStep: 'guestNotFound' }));
-          break;
-
-        case 'initialBackend':
-          setModel(prev => ({
-            ...prev,
-            sessionName: msg.sessionInfo.name,
-            isAuthenticated: msg.sessionInfo.isAdmin,
-            canvasItems: msg.canvasItems || []
-          }));
-          break;
-
-        case 'rsvpSubmitted':
-          setModel(prev => ({
-            ...prev,
-            rsvpSubmitted: true,
-            rsvpCount: msg.count
-          }));
-          break;
-
-        case 'guestListReceived':
-          setModel(prev => ({ ...prev, adminGuestList: msg.guests }));
-          break;
-
-        case 'guestSaved':
-          socket.emit('toBackend', { type: 'getGuestList' });
-          break;
-
-        case 'guestDeleted':
-          socket.emit('toBackend', { type: 'getGuestList' });
-          break;
-
-        case 'adminLoginSuccess':
-          setModel(prev => ({
-            ...prev,
-            isAuthenticated: true,
-            adminPasswordInput: '',
-            adminLoginError: false
-          }));
-          socket.emit('toBackend', { type: 'getGuestList' });
-          break;
-
-        case 'adminLoginFailed':
-          setModel(prev => ({
-            ...prev,
-            isAuthenticated: false,
-            adminLoginError: true
-          }));
-          break;
-
-        case 'canvasReceived':
-          setModel(prev => ({ ...prev, canvasItems: msg.canvasItems }));
-          break;
-
-        case 'canvasItemPlaced':
-          setModel(prev => ({
-            ...prev,
-            canvasItems: [msg.item, ...prev.canvasItems]
-          }));
-          break;
-
-        case 'canvasItemUpdated':
-          setModel(prev => ({
-            ...prev,
-            canvasItems: prev.canvasItems.map(item =>
-              item.id === msg.item.id ? { ...item, ...msg.item } : item
-            )
-          }));
-          break;
-
-        default:
-          console.log('Unknown message type:', (msg as ToFrontend).type);
-      }
+    // TODO typescript makes templates harder than C++
+    const listeners = [] as any[];
+    const listen = <Ev extends keyof ServerToClientEvents>(ev: Ev, listener: ServerToClientEvents[Ev]) => {
+      socket.on(ev, listener as any);
+      listeners.push([ev, listener]);
     };
 
-    const handleCanvasItems = (canvasItems: CanvasItem[]) => {
-      setModel(prev => ({ ...prev, canvasItems }));
-    }
+    listen('stickerPlaced', item => {
+      modifyCanvas({ type: 'add', item });
+    });
 
-    socket.on('toFrontend', handleToFrontend);
-    socket.on('canvasItems', handleCanvasItems);
+    listen('stickerMoved', item => {
+      modifyCanvas({ type: 'replace', item });
+    })
 
     return () => {
-      socket.off('toFrontend', handleToFrontend);
-      socket.off('canvasItems', handleCanvasItems);
+      if (socket) {
+        for (const [ev, listener] of listeners) {
+          socket.off(ev, listener);
+        }
+      }
     };
   }, [socket]);
 
-  const sendToBackend = (msg: ToBackend): void => {
+  const sendToBackend = <K extends keyof ClientToServerEvents>(msg: K, ...args: Parameters<ClientToServerEvents[K]>) => {
     if (socket) {
-      socket.emit('toBackend', msg);
+      socket.emit(msg, ...args);
     }
-  };
+  }
 
-  const getCanvas = () => socket?.emit('getCanvas');
-
-  const clearCanvas = () => socket?.emit('clearCanvas');
+  useEffect(() => {
+    request('/canvas').then(async response => {
+      const items = await response.json();
+      setCanvas(items);
+    })
+  }, []);
+  const clearCanvas = () => { };//socket?.emit('clearCanvas');
 
   const updateModel = (updater: (prev: FrontendModel) => FrontendModel): void => {
     setModel(updater);
   };
 
   return (
-    <AppContext.Provider value={{ model, setModel, updateModel, sendToBackend, getCanvas, clearCanvas }}>
+    <AppContext.Provider value={{
+      request,
+      model,
+      guestInfo,
+      setModel,
+      updateModel,
+      sendToBackend,
+      canvas,
+      setCanvas,
+      clearCanvas
+    }}>
       {children}
     </AppContext.Provider>
   );

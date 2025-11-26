@@ -5,6 +5,7 @@ import { Context, Middleware } from "koa";
 import Guest from "./model/guest";
 import auth from "basic-auth";
 import GuestAdminRouter from "./routes/guest-admin";
+import CanvasRouter from "./routes/canvas";
 
 const router = new SwaggerRouter({ prefix: "/api" });
 
@@ -45,6 +46,7 @@ const GuestFromHeader: Middleware<Guest> = async (ctx, next) => {
 
 router.use('/guests/me', GuestFromHeader, GuestRouter.routes(), GuestRouter.allowedMethods());
 router.use(GuestAdminRouter.routes(), GuestAdminRouter.allowedMethods());
+router.use(CanvasRouter.routes(), CanvasRouter.allowedMethods());
 router.swagger({
   title: "node-typescript-koa-rest",
   description: "Wedding Website API",

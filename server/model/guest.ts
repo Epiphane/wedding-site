@@ -25,9 +25,9 @@ export default class Guest extends BaseEntity {
   @JoinColumn()
   response: RSVP
 
-  @OneToMany(() => Sticker, (sticker) => sticker.owner, { eager: true })
+  @OneToMany(() => Sticker, (sticker) => sticker.owner, { lazy: true })
   @JoinColumn()
-  stickers: Sticker[];
+  stickers: Promise<Sticker[]>;
 
   static async findByName(name: string): Promise<Guest | null> {
     const [firstName, lastName] = name.trim().split(' ');

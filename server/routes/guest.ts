@@ -1,9 +1,8 @@
-import { validateOrReject } from "class-validator";
 import { SwaggerRouter } from "koa-swagger-decorator";
-import { Not, Equal } from "typeorm";
 import Guest from "../model/guest";
 import RSVP from "../model/rsvp";
 import Sticker from "../model/sticker";
+import GuestController from "../controller/guest";
 
 const GuestRouter = new SwaggerRouter<Guest>();
 
@@ -18,47 +17,36 @@ GuestRouter.get('/', async (ctx) => {
 });
 
 GuestRouter.get('/rsvp', async ctx => {
-  const guest = ctx.state;
-  if (!guest.response) {
+  ctx.status = 200;
+  ctx.body = await GuestController.getResponse(ctx.state);
+  if (!ctx.body) {
     ctx.status = 404;
     ctx.body = `No RSVP yet`;
   }
-  else {
-    ctx.status = 200;
-    ctx.body = guest.response;
-  }
-})
+});
 
 GuestRouter.post('/rsvp', async ctx => {
-  const guest = ctx.state;
-  const rsvp = RSVP.create(ctx.request.body as RSVP);
-  await validateOrReject(rsvp, { whitelist: true });
-
-  rsvp.guest = guest;
-  rsvp.responseTime = new Date();
-  guest.response = rsvp;
-
-  await guest.save();
-
   ctx.status = 201;
-  ctx.body = rsvp;
+  ctx.body = await GuestController.setResponse(ctx.state, ctx.request.body as RSVP);
 });
 
 GuestRouter.get('/stickers', async ctx => {
   ctx.status = 200;
-  ctx.body = ctx.state.stickers;
+  ctx.body = await GuestController.getStickers(ctx.state);
 })
 
 GuestRouter.post('/stickers', async ctx => {
-  const guest = ctx.state;
-  const sticker = Sticker.create(ctx.request.body as Sticker);
-  await validateOrReject(sticker, { whitelist: true });
-
-  sticker.owner = guest;
-  await sticker.save();
-
   ctx.status = 201;
-  ctx.body = sticker;
+  ctx.body = await GuestController.addSticker(ctx.state, ctx.request.body as Sticker);
+})
+
+GuestRouter.put('/stickers/:id', async ctx => {
+  ctx.status = 201;
+  const payload: Partial<Sticker> = {
+    ...ctx.request.body as Sticker,
+    id: +ctx.params.id,
+  }
+  ctx.body = await GuestController.updateSticker(ctx.state.id, payload);
 })
 
 export default GuestRouter;

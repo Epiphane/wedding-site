@@ -19,15 +19,15 @@ export interface CanvasItemType {
   value: string;
 }
 
-export interface CanvasItem {
-  id: string;
-  owner: string;
-  itemType: CanvasItemType;
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
-}
+// export interface CanvasItem {
+//   id: string;
+//   owner: string;
+//   itemType: CanvasItemType;
+//   x: number;
+//   y: number;
+//   rotation: number;
+//   scale: number;
+// }
 
 export type ToBackend =
   | { type: 'lookupGuestByName'; name: string }
@@ -57,7 +57,3 @@ export type ToFrontend =
   | { type: 'canvasItemPlaced'; item: CanvasItem }
   | { type: 'canvasItemUpdated'; item: CanvasItem }
   | { type: 'noOpToFrontend' };
-
-export interface CustomSocket extends Socket {
-  sessionId?: string;
-}
