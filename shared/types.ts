@@ -11,30 +11,23 @@ export interface StickerProps {
   content: string;
   x: number;
   y: number;
+  scale: number;
   rotation: number;
 };
-// export interface Sticker {
-//   id: number;
-//   owner: string;
-//   type: 'image' | 'text';
-//   content: string;
-//   x: number;
-//   y: number;
-//   rotation: number;
-//   scale: number;
-// }
 
 // Socket Types
-
 export interface ServerToClientEvents {
+  error: (message: string) => void;
   stickerPlaced: (item: Sticker) => void;
   stickerMoved: (item: Sticker) => void;
+  canvasCleared: () => void;
 }
 
 export interface ClientToServerEvents {
   setIdentity: (name: string, callback: (info: Guest) => void) => void;
-  placeSticker: (item: Partial<Sticker>) => void;
-  updateSticker: (item: Partial<Sticker>) => void;
+  placeSticker: (item: Partial<StickerProps>) => void;
+  updateSticker: (item: Partial<StickerProps>) => void;
+  clearCanvas: () => void;
 }
 
 export interface SocketData {

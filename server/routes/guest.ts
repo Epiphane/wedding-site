@@ -37,7 +37,7 @@ GuestRouter.get('/stickers', async ctx => {
 
 GuestRouter.post('/stickers', async ctx => {
   ctx.status = 201;
-  ctx.body = await GuestController.addSticker(ctx.state, ctx.request.body as Sticker);
+  ctx.body = await GuestController.addSticker(ctx.state.id, ctx.request.body as Sticker);
 })
 
 GuestRouter.put('/stickers/:id', async ctx => {

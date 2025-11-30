@@ -1,10 +1,12 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, ManyToOne } from "typeorm"
 import Guest from "./guest";
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
 @Entity()
 export default class Sticker extends BaseEntity {
   @PrimaryGeneratedColumn()
+  @IsNumber()
+  @IsOptional()
   id: number;
 
   @Column({ nullable: true })

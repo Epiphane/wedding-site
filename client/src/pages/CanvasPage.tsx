@@ -8,6 +8,7 @@ import Card from '../components/Card';
 import { FrontendModel } from '../types';
 import throttle from "lodash/throttle";
 import Sticker from '../../../server/model/sticker';
+import { StickerId, StickerProps } from '../../../shared/types';
 
 interface CanvasItemProps extends React.HTMLAttributes<HTMLDivElement> {
     item: Sticker;
@@ -20,7 +21,7 @@ interface CanvasControlsProps {
 }
 
 export default function CanvasPage(): JSX.Element {
-    const { model, guestInfo, updateModel, sendToBackend, canvas, setCanvas, clearCanvas } = useApp();
+    const { model, guestInfo, updateModel, sendToBackend, canvas, updateCanvas } = useApp();
     const moveableRef = React.useRef<Moveable>(null);
     const [target, setTarget] = React.useState<string>("");
     const targetItem = () => {
@@ -47,10 +48,16 @@ export default function CanvasPage(): JSX.Element {
         }));
     };
 
-    const updateCurrentItem = (updateFn: (item: Sticker) => Partial<Sticker>) => {
+    const updateCurrentItem = (props: Partial<StickerProps>) => {
         const currentItemId = targetItem();
-        const newCanvas = canvas.map(canvasItem => canvasItem.id === currentItemId ? updateFn(canvasItem) as Sticker : canvasItem);
-        setCanvas(newCanvas);
+        updateCanvas({
+            type: 'update',
+            id: {
+                id: currentItemId,
+                ownerId: guestInfo!.id
+            },
+            props,
+        });
     }
 
     const saveCurrentItem = () => {
@@ -116,6 +123,11 @@ export default function CanvasPage(): JSX.Element {
         };
     }, []);
 
+    const clearCanvas = () => {
+        sendToBackend('clearCanvas');
+        updateCanvas({ type: 'clear' })
+    };
+
     return (
         <div>
             <Header
@@ -173,29 +185,26 @@ export default function CanvasPage(): JSX.Element {
                             edge={true}
                             origin={false}
                             onDrag={e => {
-                                updateCurrentItem(item => ({
-                                    ...item,
+                                updateCurrentItem({
                                     x: e.translate[0],
                                     y: e.translate[1],
-                                }));
+                                });
                                 throttleSave();
                             }}
                             onDragEnd={saveCurrentItem}
                             onScale={e => {
-                                updateCurrentItem(item => ({
-                                    ...item,
+                                updateCurrentItem({
                                     x: e.drag.beforeTranslate[0],
                                     y: e.drag.beforeTranslate[1],
                                     scale: e.scale[0]
-                                }));
+                                });
                                 throttleSave();
                             }}
                             onScaleEnd={saveCurrentItem}
                             onRotate={e => {
-                                updateCurrentItem(item => ({
-                                    ...item,
+                                updateCurrentItem({
                                     rotation: e.rotation
-                                }));
+                                });
                                 throttleSave();
                             }}
                             onRotateEnd={saveCurrentItem}

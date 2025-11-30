@@ -27,11 +27,11 @@ export default class GuestController {
     return guest.stickers;
   }
 
-  public static async addSticker(guest: Guest, info: Partial<Sticker>): Promise<Sticker> {
+  public static async addSticker(guestId: Guest["id"], info: Partial<Sticker>): Promise<Sticker> {
     const sticker = Sticker.create<Sticker>(info);
     await validateOrReject(sticker, { whitelist: true });
 
-    sticker.owner = guest;
+    sticker.ownerId = guestId;
     return sticker.save();
   }
 

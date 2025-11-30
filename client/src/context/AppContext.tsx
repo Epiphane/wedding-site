@@ -5,7 +5,7 @@ import { ClientToServerEvents, ServerToClientEvents } from '../../../shared/type
 import useLocalStorage from '../utils/useLocalStorage';
 import Guest from '../../../server/model/guest';
 import Sticker from '../../../server/model/sticker';
-import canvasReducer from '../types/canvas';
+import canvasReducer, { CanvasAction, CanvasState } from '../types/canvas';
 
 const BACKEND_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
@@ -15,9 +15,8 @@ interface AppContextType {
   guestInfo: Guest | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
   updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
-  canvas: Sticker[];
-  setCanvas: (items: Sticker[]) => void;
-  clearCanvas: () => void;
+  canvas: CanvasState;
+  updateCanvas: (action: CanvasAction) => void;
   sendToBackend: <K extends keyof ClientToServerEvents>(msg: K, ...args: Parameters<ClientToServerEvents[K]>) => void;
 }
 
@@ -65,9 +64,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
 
   const request = (apiUrl: string, init?: RequestInit) => fetch(BACKEND_URL + '/api' + apiUrl, init);
 
-  const [canvas2, modifyCanvas] = useReducer(canvasReducer, [])
-
-  const [canvas, setCanvas] = useState<Sticker[]>([]);
+  const [canvas, updateCanvas] = useReducer(canvasReducer, [])
   const [myName, setMyName] = useLocalStorage<string>('guestName');
   const [guestInfo, setGuestInfo] = useState<Guest>();
 
@@ -90,11 +87,11 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     };
 
     listen('stickerPlaced', item => {
-      modifyCanvas({ type: 'add', item });
+      updateCanvas({ type: 'add', item });
     });
 
     listen('stickerMoved', item => {
-      modifyCanvas({ type: 'replace', item });
+      updateCanvas({ type: 'replace', item });
     })
 
     return () => {
@@ -115,10 +112,9 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
   useEffect(() => {
     request('/canvas').then(async response => {
       const items = await response.json();
-      setCanvas(items);
+      updateCanvas({ type: 'set', items });
     })
   }, []);
-  const clearCanvas = () => { };//socket?.emit('clearCanvas');
 
   const updateModel = (updater: (prev: FrontendModel) => FrontendModel): void => {
     setModel(updater);
@@ -133,8 +129,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       updateModel,
       sendToBackend,
       canvas,
-      setCanvas,
-      clearCanvas
+      updateCanvas,
     }}>
       {children}
     </AppContext.Provider>

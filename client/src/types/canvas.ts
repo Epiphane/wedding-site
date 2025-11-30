@@ -1,12 +1,12 @@
 import Sticker from "../../../server/model/sticker";
 import { StickerId, StickerProps } from "../../../shared/types";
 
-type CanvasState = Sticker[];
-type CanvasAction =
+export type CanvasState = Sticker[];
+export type CanvasAction =
   { type: 'set', items: Sticker[] } |
   { type: 'add', item: Sticker } |
   { type: 'replace', item: Sticker } |
-  { type: 'update', id: StickerId, props: StickerProps } |
+  { type: 'update', id: StickerId, props: Partial<StickerProps> } |
   { type: 'remove', item: StickerId } |
   { type: 'clear' };
 

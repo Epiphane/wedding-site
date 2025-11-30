@@ -12,7 +12,7 @@ import RSVP from './model/rsvp';
 import Sticker from './model/sticker';
 import DataSeeder from './seed/seed';
 import cors from '@koa/cors';
-import { ClientToServerEvents, ServerToClientEvents, SocketData } from '../shared/types';
+import { ClientToServerEvents, ServerToClientEvents, SocketData, StickerProps } from '../shared/types';
 import GuestController from './controller/guest';
 
 dotenv.config();
@@ -31,7 +31,7 @@ AppDataSource.initialize()
       await new DataSeeder().run(connection);
     }
 
-    connection.setOptions({ logging: ['query'] })
+    // connection.setOptions({ logging: ['query'] })
 
     const app = new Koa()
     app.use(cors())
@@ -70,11 +70,17 @@ AppDataSource.initialize()
         }
       })
 
-      socket.on('placeSticker', (msg: Partial<Sticker>) => {
-        // console.log(msg);
+      socket.on('placeSticker', async (msg: Partial<StickerProps>) => {
+        if (!socket.data.guestId) {
+          socket.emit('error', 'Not logged in');
+          return;
+        }
+
+        const sticker = await GuestController.addSticker(socket.data.guestId, msg);
+        socket.broadcast.emit('stickerPlaced', sticker);
       })
 
-      socket.on('updateSticker', async (msg: Partial<Sticker>) => {
+      socket.on('updateSticker', async (msg: Partial<StickerProps>) => {
         if (socket.data.guestId) {
           const newSticker = await GuestController.updateSticker(socket.data.guestId, msg);
           socket.broadcast.emit('stickerMoved', newSticker);
