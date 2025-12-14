@@ -129,14 +129,7 @@ export default function CanvasPage(): JSX.Element {
     };
 
     return (
-        <div>
-            <Header
-                weddingDate={model.weddingDate}
-                venue={model.venue}
-                coupleNames={model.coupleNames}
-            />
-            <NavigationBar isAuthenticated={model.isAuthenticated} />
-
+        <React.Fragment>
             <div
                 style={{
                     maxWidth: '1400px',
@@ -233,9 +226,7 @@ export default function CanvasPage(): JSX.Element {
                     </div>
                 </div>
             </div>
-
-            <Footer />
-        </div>
+        </React.Fragment>
     );
 }
 

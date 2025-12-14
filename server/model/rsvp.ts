@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, ManyToOne } from "typeorm"
 import Guest from "./guest";
-import { IsBoolean } from "class-validator";
+import { IsBoolean, IsString } from "class-validator";
 import { isBoolean } from "lodash";
 
 @Entity()
@@ -21,6 +21,10 @@ export default class RSVP extends BaseEntity {
   @Column()
   @IsBoolean()
   plusOne: boolean;
+
+  @Column()
+  @IsString()
+  plusOneName: string;
 
   toJSON() {
     const { guest, id, ...rest } = this;

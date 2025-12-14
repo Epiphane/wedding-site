@@ -11,6 +11,10 @@ const BACKEND_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.locatio
 
 interface AppContextType {
   request: (apiUrl: string, init?: RequestInit) => Promise<Response>;
+  isAuthenticated: boolean;
+  setAdminPassword: (name: string) => Promise<void>;
+  login: (name: string) => Promise<Guest>;
+  logout: () => void;
   model: FrontendModel;
   guestInfo: Guest | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
@@ -41,7 +45,6 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     weddingDate: 'August 22, 2026',
     venue: 'Ampitheatre of the Redwoods',
     sessionName: '',
-    isAuthenticated: false,
     rsvpStep: 'enteringName',
     rsvpName: '',
     rsvpAttending: 'attending',
@@ -51,8 +54,6 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     rsvpCount: 0,
     adminPasswordInput: '',
     adminLoginError: false,
-    adminGuestList: [],
-    adminEditingGuest: null,
     adminFormName: '',
     adminFormEmail: '',
     adminFormPlusOne: false,
@@ -62,19 +63,69 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     stickerScale: 1.0,
   });
 
-  const request = (apiUrl: string, init?: RequestInit) => fetch(BACKEND_URL + '/api' + apiUrl, init);
+  const [adminPassword, setAdminPassword] = useLocalStorage<string>('adminPassword');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsAuthenticated(!!adminPassword);
+  }, [adminPassword]);
+
+  const request = (apiUrl: string, init?: RequestInit) => {
+    if (adminPassword) {
+      init = {
+        ...init,
+        headers: {
+          ...init?.headers,
+          Authorization: `Basic ${btoa(`user:${adminPassword}`)}`,
+        }
+      }
+    }
+    return fetch(BACKEND_URL + '/api' + apiUrl, init);
+  }
 
   const [canvas, updateCanvas] = useReducer(canvasReducer, [])
   const [myName, setMyName] = useLocalStorage<string>('guestName');
   const [guestInfo, setGuestInfo] = useState<Guest>();
 
+  const testAdminPassword = (password: string): Promise<void> => {
+    return request('/guests', { headers: { Authorization: `Basic ${btoa(`user:${password}`)}` } })
+      .then(result => {
+        if (result.status !== 200) {
+          throw new Error(`Invalid password!`);
+        }
+        setAdminPassword(password);
+      })
+  };
+
+  const login = (name: string): Promise<Guest> => {
+    if (!socket) {
+      return Promise.reject('socket unavailable');
+    }
+    return socket.emitWithAck('setIdentity', name).then(([info, err]) => {
+      if (!info) {
+        throw err;
+      }
+
+      setGuestInfo(info);
+      setMyName(`${info.firstName} ${info.lastName}`);
+      return info;
+    })
+  }
+
+  const logout = () => {
+    if (!socket) {
+      return Promise.reject('socket unavailable');
+    }
+    setGuestInfo(undefined);
+    setMyName(``);
+    return socket.emitWithAck('setIdentity', '');
+  }
+
   useEffect(() => {
     if (socket && myName) {
-      socket.emitWithAck('setIdentity', myName).then(info => {
-        setGuestInfo(info);
-      })
+      login(myName);
     }
-  }, [socket, myName])
+  }, [socket, myName]);
 
   useEffect(() => {
     if (!socket) { return; }
@@ -123,6 +174,10 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
   return (
     <AppContext.Provider value={{
       request,
+      isAuthenticated,
+      setAdminPassword: testAdminPassword,
+      login,
+      logout,
       model,
       guestInfo,
       setModel,

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOne, OneToMany, PrimaryColumn, FindOptionsWhere, Unique, ILike } from "typeorm"
 import RSVP from "./rsvp"
-import { IsEmail, IsString } from "class-validator"
+import { IsBoolean, IsEmail, IsPhoneNumber, IsString } from "class-validator"
 import Sticker from "./sticker"
 
 @Entity()
@@ -17,9 +17,44 @@ export default class Guest extends BaseEntity {
   @IsString()
   lastName: string
 
+  @Column({ nullable: true })
+  @IsString()
+  gender: string
+
+  @Column({ default: '' })
+  @IsString()
+  lodgingOptions: string
+
   @Column()
   @IsEmail()
   email: string
+
+  @Column({ nullable: true })
+  @IsPhoneNumber()
+  phone: string
+
+  @Column({ nullable: true })
+  @IsString()
+  address: string
+
+  @Column({ default: false })
+  @IsBoolean()
+  plusOneAllowed: boolean;
+
+  @Column({ default: false })
+  @IsBoolean()
+  saveTheDateSent: boolean;
+
+  @Column({ default: false })
+  @IsBoolean()
+  inviteSent: boolean;
+
+  @Column({ nullable: true })
+  partnerId: number;
+
+  @OneToOne(() => Guest, (other) => other.partner)
+  @JoinColumn()
+  partner: Guest;
 
   @OneToOne(() => RSVP, { eager: true, cascade: true, })
   @JoinColumn()
@@ -36,7 +71,12 @@ export default class Guest extends BaseEntity {
       options.lastName = ILike(lastName);
     }
 
-    const [guests, count] = await Guest.findAndCountBy(options);
+    const [guests, count] = await Guest.findAndCount({
+      where: options,
+      relations: {
+        partner: true,
+      }
+    });
     if (count === 1) {
       return guests[0];
     }
@@ -55,5 +95,10 @@ export default class Guest extends BaseEntity {
     }
 
     return guest;
+  }
+
+  toJSON() {
+    const { partnerId, ...rest } = this as any;
+    return { ...rest };
   }
 }

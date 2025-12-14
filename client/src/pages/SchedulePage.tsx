@@ -17,14 +17,7 @@ export default function SchedulePage(): JSX.Element {
   const { model } = useApp();
 
   return (
-    <div>
-      <Header
-        weddingDate={model.weddingDate}
-        venue={model.venue}
-        coupleNames={model.coupleNames}
-      />
-      <NavigationBar isAuthenticated={model.isAuthenticated} />
-
+    <React.Fragment>
       <div
         style={{
           background: 'white',
@@ -81,9 +74,7 @@ export default function SchedulePage(): JSX.Element {
           />
         </div>
       </div>
-
-      <Footer />
-    </div>
+    </React.Fragment>
   );
 }
 

@@ -63,10 +63,16 @@ AppDataSource.initialize()
       // });
 
       socket.on('setIdentity', async (name, callback) => {
-        const guest = await Guest.findByName(name);
-        if (guest) {
-          socket.data.guestId = guest.id;
-          callback(guest);
+        console.log('setIdentity', name);
+        try {
+          const guest = await Guest.findByName(name);
+          if (guest) {
+            socket.data.guestId = guest.id;
+            callback([guest, null]);
+          }
+        }
+        catch (e: any) {
+          callback([null, e]);
         }
       })
 

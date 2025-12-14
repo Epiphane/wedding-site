@@ -24,7 +24,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  setIdentity: (name: string, callback: (info: Guest) => void) => void;
+  setIdentity: (name: string, callback: (info: [Guest | null, Error | null]) => void) => void;
   placeSticker: (item: Partial<StickerProps>) => void;
   updateSticker: (item: Partial<StickerProps>) => void;
   clearCanvas: () => void;

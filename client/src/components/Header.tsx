@@ -1,14 +1,4 @@
-import React from 'react';
-
-interface HeaderProps {
-  weddingDate: string;
-  venue: string;
-  coupleNames: [string, string];
-}
-
-export default function Header({ weddingDate, venue, coupleNames }: HeaderProps): JSX.Element {
-  const [name1, name2] = coupleNames;
-
+export default function Header(): JSX.Element {
   return (
     <>
       <div
@@ -20,8 +10,8 @@ export default function Header({ weddingDate, venue, coupleNames }: HeaderProps)
           color: '#333'
         }}
       >
-        <div>{weddingDate}</div>
-        <div>{venue}</div>
+        <div>August 22, 2026</div>
+        <div>Ampitheatre of the Redwoods</div>
       </div>
       <div
         style={{
@@ -30,7 +20,7 @@ export default function Header({ weddingDate, venue, coupleNames }: HeaderProps)
         }}
       >
         <h1 className="name-banner">
-          {name1} & {name2}
+          Thomas Steinke & Liz Petersen
         </h1>
       </div>
     </>

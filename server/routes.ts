@@ -44,9 +44,27 @@ const GuestFromHeader: Middleware<Guest> = async (ctx, next) => {
   return next();
 }
 
+const RequireAdmin: Middleware = async (ctx, next) => {
+  const authHeader = auth(ctx.request);
+  if (!authHeader) {
+    ctx.status = 401;
+    ctx.body = "Admin permissions required";
+    return;
+  }
+
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'thomas';
+  if (authHeader.pass != ADMIN_PASSWORD) {
+    ctx.status = 401;
+    ctx.body = "Admin permissions required";
+    return;
+  }
+
+  return next();
+}
+
 router.use('/guests/me', GuestFromHeader, GuestRouter.routes(), GuestRouter.allowedMethods());
-router.use(GuestAdminRouter.routes(), GuestAdminRouter.allowedMethods());
 router.use(CanvasRouter.routes(), CanvasRouter.allowedMethods());
+router.use(RequireAdmin, GuestAdminRouter.routes(), GuestAdminRouter.allowedMethods());
 router.swagger({
   title: "node-typescript-koa-rest",
   description: "Wedding Website API",

@@ -1,123 +1,75 @@
-import React, { useEffect, ChangeEvent } from 'react';
+import React, { useEffect, useState, FormEvent } from 'react';
 import { useApp } from '../context/AppContext';
-import Header from '../components/Header';
-import NavigationBar from '../components/NavigationBar';
-import Footer from '../components/Footer';
 import Card from '../components/Card';
-import { FrontendModel } from '../types';
 import Guest from '../../../server/model/guest';
 
-interface AdminLoginFormProps {
-  model: FrontendModel;
-  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
-  sendToBackend: (msg: any) => void;
-}
-
-interface AdminGuestFormProps {
-  model: FrontendModel;
-  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
-  sendToBackend: (msg: any) => void;
-}
-
-interface AdminGuestTableProps {
-  model: FrontendModel;
-  updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
-  sendToBackend: (msg: any) => void;
-  onEdit: (guest: Guest) => void;
-}
+const defaultGuest = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  address: '',
+  phone: '',
+  plusOneAllowed: false,
+} as Guest;
 
 export default function AdminPage(): JSX.Element {
-  const { model, updateModel, sendToBackend } = useApp();
+  const { request, isAuthenticated, updateModel } = useApp();
+  const [guestList, setGuestList] = useState<Guest[]>();
+  const [pendingGuest, setPendingGuest] = useState<Guest>(defaultGuest);
+  const updateGuest = (info: Partial<Guest>) =>
+    setPendingGuest({ ...pendingGuest, ...info } as Guest);
 
   useEffect(() => {
-    if (model.isAuthenticated) {
-      // sendToBackend({ type: 'getGuestList' });
+    if (isAuthenticated) {
+      request('/guests').then(async response => setGuestList(await response.json()));
     }
-  }, [model.isAuthenticated, sendToBackend]);
+    else {
+      setGuestList(undefined);
+    }
+  }, [isAuthenticated]);
 
-  if (model.isAuthenticated) {
-    return (
-      <div>
-        <Header
-          weddingDate={model.weddingDate}
-          venue={model.venue}
-          coupleNames={model.coupleNames}
-        />
-        <NavigationBar isAuthenticated={model.isAuthenticated} />
-
-        <div
-          style={{
-            maxWidth: '1000px',
-            margin: '20px auto',
-            padding: '0 20px',
-            display: 'flex',
-            justifyContent: 'flex-end'
-          }}
-        >
-          <button
-            onClick={() => {
-              // sendToBackend({ type: 'logoutBackend' });
-              updateModel(prev => ({ ...prev, isAuthenticated: false }));
-            }}
-            style={{
-              background: '#333',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              fontSize: '0.9em',
-              borderRadius: '2px',
-              cursor: 'pointer',
-              fontFamily: "'Georgia', 'Times New Roman', serif"
-            }}
-          >
-            Logout
-          </button>
-        </div>
-
-        <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '20px' }}>
-          <AdminGuestForm model={model} updateModel={updateModel} sendToBackend={sendToBackend} />
-          <AdminGuestTable
-            model={model}
-            updateModel={updateModel}
-            sendToBackend={sendToBackend}
-            onEdit={(guest) => {
-              // updateModel(prev => ({
-              //   ...prev,
-              //   adminEditingGuest: guest,
-              //   adminFormName: guest.firstName,
-              //   adminFormEmail: guest.email,
-              //   adminFormPlusOne: guest.plusOne
-              // }));
-            }}
-          />
-        </div>
-
-        <Footer />
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <AdminLoginForm />;
   }
 
   return (
-    <div>
-      <Header
-        weddingDate={model.weddingDate}
-        venue={model.venue}
-        coupleNames={model.coupleNames}
-      />
-      <NavigationBar isAuthenticated={model.isAuthenticated} />
-      <AdminLoginForm model={model} updateModel={updateModel} sendToBackend={sendToBackend} />
-      <Footer />
-    </div>
+    <React.Fragment>
+      <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '20px' }}>
+        <AdminGuestForm
+          updateGuest={updateGuest}
+          guestInfo={pendingGuest}
+          isEditing={pendingGuest.id !== 0}
+          onCancel={() => {
+            setPendingGuest(defaultGuest);
+          }}
+        />
+        {guestList && <AdminGuestList guestList={guestList}
+          onEdit={(guest) => setPendingGuest(guest)}
+          onDelete={(guest) => { }}
+        // updateModel(prev => ({
+        //   ...prev,
+        //   adminEditingGuest: guest,
+        //   adminFormName: guest.firstName,
+        //   adminFormEmail: guest.email,
+        //   adminFormPlusOne: guest.plusOne
+        // }));
+        // }}
+        />
+        }
+      </div>
+    </React.Fragment>
   );
 }
 
-function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormProps): JSX.Element {
-  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, adminPasswordInput: e.target.value }));
-  };
+function AdminLoginForm(): JSX.Element {
+  const { setAdminPassword } = useApp();
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = () => {
-    sendToBackend({ type: 'adminLogin', password: model.adminPasswordInput });
+  const handleFormSubmit = (event: FormEvent | MouseEvent) => {
+    event.preventDefault();
+    setAdminPassword(password)
+      .catch(err => setError(err))
   };
 
   return (
@@ -132,7 +84,7 @@ function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormPro
         >
           Admin Login
         </h2>
-        {model.adminLoginError && (
+        {error && (
           <div
             style={{
               background: '#f8d7da',
@@ -159,8 +111,8 @@ function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormPro
           </label>
           <input
             type="password"
-            value={model.adminPasswordInput}
-            onChange={handlePasswordChange}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
             placeholder="Enter admin password"
             style={{
               width: '100%',
@@ -173,16 +125,16 @@ function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormPro
           />
         </div>
         <button
-          onClick={handleLogin}
-          disabled={model.adminPasswordInput.trim() === ''}
+          onClick={handleFormSubmit}
+          disabled={password.trim() === ''}
           style={{
-            background: model.adminPasswordInput.trim() === '' ? '#ccc' : '#333',
+            background: password.trim() === '' ? '#ccc' : '#333',
             color: 'white',
             border: 'none',
             padding: '12px 30px',
             fontSize: '1em',
             borderRadius: '2px',
-            cursor: model.adminPasswordInput.trim() === '' ? 'not-allowed' : 'pointer',
+            cursor: password.trim() === '' ? 'not-allowed' : 'pointer',
             fontFamily: "'Georgia', 'Times New Roman', serif",
             width: '100%'
           }}
@@ -194,18 +146,26 @@ function AdminLoginForm({ model, updateModel, sendToBackend }: AdminLoginFormPro
   );
 }
 
-function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormProps): JSX.Element {
-  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, adminFormName: e.target.value }));
-  };
+type AdminGuestFormProps = {
+  isEditing: boolean;
+  guestInfo: Guest;
+  updateGuest: (info: Partial<Guest>) => void;
+  onCancel: () => void;
+}
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, adminFormEmail: e.target.value }));
-  };
+function AdminGuestForm({ isEditing, guestInfo, updateGuest, onCancel }: AdminGuestFormProps): JSX.Element {
+  // const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   updateModel(prev => ({ ...prev, adminFormName: e.target.value }));
+  // };
 
-  const handlePlusOneChange = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, adminFormPlusOne: e.target.checked }));
-  };
+  // const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   updateModel(prev => ({ ...prev, adminFormEmail: e.target.value }));
+  // };
+
+  // const handlePlusOneChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   updateModel(prev => ({ ...prev, adminFormPlusOne: e.target.checked }));
+  // };
+
 
   const handleSave = () => {
     // const guest: Guest = {
@@ -223,34 +183,35 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
     // }));
   };
 
-  const handleCancel = () => {
-    updateModel(prev => ({
-      ...prev,
-      adminFormName: '',
-      adminFormEmail: '',
-      adminFormPlusOne: false,
-      adminEditingGuest: null
-    }));
-  };
+  const [isGuestValid, setIsGuestValid] = useState(false);
+  useEffect(() => {
+    setIsGuestValid(
+      !!guestInfo.firstName &&
+      !!guestInfo.lastName &&
+      !!guestInfo.email
+    );
+  }, [guestInfo]);
 
   return (
     <Card style={{ marginBottom: '30px' }}>
-      <h2
-        style={{
-          marginTop: '0',
-          color: '#333'
-        }}
-      >
-        {model.adminEditingGuest ? 'Edit Guest' : 'Add New Guest'}
-      </h2>
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: '1fr 1fr 1fr',
           gap: '20px',
           marginBottom: '20px'
         }}
       >
+        <h2
+          style={{
+            marginTop: '0',
+            color: '#333',
+            gridColumnStart: 1,
+            gridColumnEnd: 4,
+          }}
+        >
+          {isEditing ? 'Edit Guest' : 'Add New Guest'}
+        </h2>
         <div>
           <label
             style={{
@@ -260,13 +221,43 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
               fontWeight: 'bold'
             }}
           >
-            Name
+            First Name
           </label>
           <input
             type="text"
-            value={model.adminFormName}
-            onChange={handleNameChange}
-            placeholder="Guest name"
+            value={guestInfo.firstName}
+            onChange={e => {
+              updateGuest({ firstName: e.target.value });
+            }}
+            placeholder="First name"
+            style={{
+              width: '100%',
+              padding: '10px',
+              border: '1px solid #ddd',
+              borderRadius: '5px',
+              fontSize: '1em',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+        <div>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '5px',
+              color: '#333',
+              fontWeight: 'bold'
+            }}
+          >
+            Last Name
+          </label>
+          <input
+            type="text"
+            value={guestInfo.lastName}
+            onChange={e => {
+              updateGuest({ lastName: e.target.value });
+            }}
+            placeholder="Last name"
             style={{
               width: '100%',
               padding: '10px',
@@ -290,8 +281,8 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
           </label>
           <input
             type="email"
-            value={model.adminFormEmail}
-            onChange={handleEmailChange}
+            value={guestInfo.email}
+            onChange={e => updateGuest({ email: e.target.value })}
             placeholder="guest@example.com"
             style={{
               width: '100%',
@@ -314,8 +305,8 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
         >
           <input
             type="checkbox"
-            checked={model.adminFormPlusOne}
-            onChange={handlePlusOneChange}
+            checked={!!guestInfo.plusOneAllowed}
+            onChange={e => updateGuest({ plusOneAllowed: !guestInfo.plusOneAllowed })}
             style={{
               marginRight: '10px',
               width: '20px',
@@ -329,24 +320,24 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
       <div style={{ display: 'flex', gap: '10px' }}>
         <button
           onClick={handleSave}
-          disabled={model.adminFormName.trim() === '' || model.adminFormEmail.trim() === ''}
+          disabled={!isGuestValid}
           style={{
-            background: (model.adminFormName.trim() === '' || model.adminFormEmail.trim() === '') ? '#ccc' : '#333',
+            background: (!isGuestValid) ? '#ccc' : '#333',
             color: 'white',
             border: 'none',
             padding: '12px 30px',
             fontSize: '1em',
             borderRadius: '2px',
-            cursor: (model.adminFormName.trim() === '' || model.adminFormEmail.trim() === '') ? 'not-allowed' : 'pointer',
+            cursor: (!isGuestValid) ? 'not-allowed' : 'pointer',
             fontFamily: "'Georgia', 'Times New Roman', serif",
             flex: '1'
           }}
         >
           Save Guest
         </button>
-        {model.adminEditingGuest && (
+        {isEditing && (
           <button
-            onClick={handleCancel}
+            onClick={onCancel}
             style={{
               background: '#666',
               color: 'white',
@@ -366,15 +357,13 @@ function AdminGuestForm({ model, updateModel, sendToBackend }: AdminGuestFormPro
   );
 }
 
-function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGuestTableProps): JSX.Element {
-  const handleEdit = (guest: Guest) => {
-    onEdit(guest);
-  };
+type AdminGuestListProps = {
+  guestList: Guest[];
+  onEdit: (guest: Guest) => void;
+  onDelete: (guest: Guest) => void;
+}
 
-  const handleDelete = (email: string) => {
-    sendToBackend({ type: 'deleteGuestByEmail', email });
-  };
-
+function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): JSX.Element {
   return (
     <Card style={{ padding: '0', overflow: 'hidden' }}>
       <h2
@@ -385,9 +374,9 @@ function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGue
           borderBottom: '2px solid #f0f0f0'
         }}
       >
-        Guest List ({model.adminGuestList.length} guests)
+        Guest List ({guestList.length} guests)
       </h2>
-      {model.adminGuestList.length === 0 ? (
+      {guestList.length === 0 ? (
         <div
           style={{
             padding: '40px',
@@ -419,17 +408,17 @@ function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGue
             </tr>
           </thead>
           <tbody>
-            {model.adminGuestList.map((guest, index) => (
+            {guestList.map((guest, index) => (
               <tr key={index} style={{ borderTop: '1px solid #e9ecef' }}>
                 <td style={{ padding: '15px 20px' }}>{guest.firstName}</td>
                 <td style={{ padding: '15px 20px' }}>{guest.lastName}</td>
                 <td style={{ padding: '15px 20px', color: '#666' }}>{guest.email}</td>
                 <td style={{ padding: '15px 20px', textAlign: 'center' }}>
-                  {guest.response.plusOne ? '✓' : '✗'}
+                  {guest.response?.plusOne ? '✓' : '✗'}
                 </td>
                 <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                   <button
-                    onClick={() => handleEdit(guest)}
+                    onClick={() => onEdit(guest)}
                     style={{
                       background: '#333',
                       color: 'white',
@@ -445,7 +434,7 @@ function AdminGuestTable({ model, updateModel, sendToBackend, onEdit }: AdminGue
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(guest.email)}
+                    onClick={() => onDelete(guest)}
                     style={{
                       background: '#666',
                       color: 'white',

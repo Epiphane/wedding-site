@@ -1,5 +1,3 @@
-import Guest from "../../../server/model/guest";
-
 export type AttendanceStatus = 'attending' | 'notAttending';
 
 export type RsvpStep = 'enteringName' | 'guestConfirmed' | 'guestNotFound';
@@ -19,7 +17,6 @@ export interface FrontendModel {
   weddingDate: string;
   venue: string;
   sessionName: string;
-  isAuthenticated: boolean;
   rsvpStep: RsvpStep;
   rsvpName: string;
   rsvpAttending: AttendanceStatus;
@@ -29,8 +26,6 @@ export interface FrontendModel {
   rsvpCount: number;
   adminPasswordInput: string;
   adminLoginError: boolean;
-  adminGuestList: Guest[];
-  adminEditingGuest: Guest | null;
   adminFormName: string;
   adminFormEmail: string;
   adminFormPlusOne: boolean;
@@ -38,5 +33,4 @@ export interface FrontendModel {
   textInput: string;
   stickerRotation: number;
   stickerScale: number;
-  confirmedGuest?: Guest;
 }

@@ -9,14 +9,7 @@ export default function TravelPage(): JSX.Element {
   const { model } = useApp();
 
   return (
-    <div>
-      <Header
-        weddingDate={model.weddingDate}
-        venue={model.venue}
-        coupleNames={model.coupleNames}
-      />
-      <NavigationBar isAuthenticated={model.isAuthenticated} />
-
+    <React.Fragment>
       <div
         style={{
           background: 'white',
@@ -127,8 +120,6 @@ export default function TravelPage(): JSX.Element {
           </Card>
         </div>
       </div>
-
-      <Footer />
-    </div>
+    </React.Fragment>
   );
 }

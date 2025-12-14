@@ -10,14 +10,7 @@ export default function HomePage(): JSX.Element {
   const [name1, name2] = model.coupleNames;
 
   return (
-    <div>
-      <Header
-        weddingDate={model.weddingDate}
-        venue={model.venue}
-        coupleNames={model.coupleNames}
-      />
-      <NavigationBar isAuthenticated={model.isAuthenticated} />
-
+    <React.Fragment>
       {/* Hero Image Section */}
       <div
         style={{
@@ -177,9 +170,7 @@ export default function HomePage(): JSX.Element {
           RSVP Now
         </Link>
       </div>
-
-      <Footer />
-    </div>
+    </React.Fragment>
   );
 }
 

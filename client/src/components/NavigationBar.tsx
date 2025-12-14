@@ -1,12 +1,9 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 
-interface NavigationBarProps {
-  isAuthenticated: boolean;
-}
-
-export default function NavigationBar({ isAuthenticated }: NavigationBarProps): JSX.Element {
+export default function NavigationBar(): JSX.Element {
   const location = useLocation();
+  const { isAuthenticated, guestInfo, logout } = useApp();
 
   const navLink = (href: string, label: string, isActive: boolean): JSX.Element => (
     <Link to={href} className={isActive ? "active" : ""}>
@@ -23,6 +20,7 @@ export default function NavigationBar({ isAuthenticated }: NavigationBarProps): 
         {navLink('/rsvp', 'RSVP', location.pathname === '/rsvp')}
         {isAuthenticated && navLink('/admin', 'Admin', location.pathname === '/admin')}
         {navLink('/canvas', 'Canvas', location.pathname === '/canvas')}
+        {guestInfo && <a onClick={logout} style={{ cursor: 'pointer' }}>{guestInfo.firstName} {guestInfo.lastName}</a>}
       </div>
     </nav>
   );

@@ -1,4 +1,4 @@
-import React, { ChangeEvent } from 'react';
+import React, { ChangeEvent, FormEvent, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
@@ -6,7 +6,6 @@ import Footer from '../components/Footer';
 import { FrontendModel } from '../types';
 
 interface RsvpHandlers {
-  handleUpdateRsvpName: (e: ChangeEvent<HTMLInputElement>) => void;
   handleLookupGuest: () => void;
   handleUpdateAttending: (e: ChangeEvent<HTMLSelectElement>) => void;
   handleUpdatePlusOneName: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -15,105 +14,28 @@ interface RsvpHandlers {
 }
 
 export default function RsvpPage(): JSX.Element {
-  const { model, updateModel, sendToBackend } = useApp();
+  const { request, login, model, updateModel, guestInfo, sendToBackend } = useApp();
+  const [nameInput, setNameInput] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleUpdateRsvpName = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, rsvpName: e.target.value }));
-  };
+  if (guestInfo === undefined) {
+    const handleFormSubmit = (event: FormEvent | MouseEvent) => {
+      event.preventDefault();
+      request('/guests/me', { headers: { Authorization: `Basic ${btoa(`${nameInput}:test`)}` } })
+        .then(result => {
+          if (result.status !== 200) {
+            setError(`We couldn't find your name on the guest list. Please check the spelling and try again.`);
+            return;
+          }
+          login(nameInput)
+            .then(() => setError(null))
+            .catch(err => setError(err));
+        })
+    };
 
-  const handleLookupGuest = () => {
-    // sendToBackend({ type: 'lookupGuestByName', name: model.rsvpName });
-  };
-
-  const handleUpdateAttending = (e: ChangeEvent<HTMLSelectElement>) => {
-    updateModel(prev => ({
-      ...prev,
-      rsvpAttending: e.target.value as 'attending' | 'notAttending'
-    }));
-  };
-
-  const handleUpdatePlusOneName = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, rsvpPlusOneName: e.target.value }));
-  };
-
-  const handleUpdatePlusOneAttending = (e: ChangeEvent<HTMLSelectElement>) => {
-    updateModel(prev => ({
-      ...prev,
-      rsvpPlusOneAttending: e.target.value as 'attending' | 'notAttending'
-    }));
-  };
-
-  const handleSubmitRsvp = () => {
-    if (model.rsvpStep === 'guestConfirmed' && model.confirmedGuest) {
-      // const rsvp = {
-      //   guestName: model.confirmedGuest.name,
-      //   email: model.confirmedGuest.email,
-      //   attending: model.rsvpAttending,
-      //   plusOneName: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneName : null,
-      //   plusOneAttending: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneAttending : null
-      // };
-      // // sendToBackend({ type: 'submitRsvpToBackend', rsvp });
-      // updateModel(prev => ({ ...prev, rsvpSubmitted: true }));
-    }
-  };
-
-  return (
-    <div>
-      <Header
-        weddingDate={model.weddingDate}
-        venue={model.venue}
-        coupleNames={model.coupleNames}
-      />
-      <NavigationBar isAuthenticated={model.isAuthenticated} />
-
-      <div
-        style={{
-          background: 'white',
-          padding: '80px 20px',
-          textAlign: 'center',
-          minHeight: '60vh'
-        }}
-      >
-        <h2
-          style={{
-            fontSize: '2em',
-            marginBottom: '20px',
-            color: '#333',
-            fontWeight: '400',
-            fontFamily: "'Georgia', 'Times New Roman', serif"
-          }}
-        >
-          RSVP
-        </h2>
-        <p
-          style={{
-            color: '#666',
-            fontSize: '1.1em',
-            marginBottom: '40px',
-            fontFamily: "'Georgia', 'Times New Roman', serif"
-          }}
-        >
-          We'd love to celebrate with you!
-        </p>
-        {renderRsvpForm(model, {
-          handleUpdateRsvpName,
-          handleLookupGuest,
-          handleUpdateAttending,
-          handleUpdatePlusOneName,
-          handleUpdatePlusOneAttending,
-          handleSubmitRsvp
-        })}
-      </div>
-
-      <Footer />
-    </div>
-  );
-}
-
-function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Element | null {
-  if (model.rsvpStep === 'enteringName' || model.rsvpStep === 'guestNotFound') {
     return (
-      <div
+      <form
+        onSubmit={handleFormSubmit}
         style={{
           maxWidth: '500px',
           margin: '30px auto',
@@ -124,7 +46,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
           border: '1px solid #e0e0e0'
         }}
       >
-        {model.rsvpStep === 'guestNotFound' && (
+        {error && (
           <div
             style={{
               background: '#f8d7da',
@@ -135,7 +57,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
               textAlign: 'center'
             }}
           >
-            We couldn't find your name on the guest list. Please check the spelling and try again.
+            {error}
           </div>
         )}
         <p style={{ color: '#666', marginBottom: '20px' }}>
@@ -153,8 +75,8 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
           </label>
           <input
             type="text"
-            value={model.rsvpName}
-            onChange={handlers.handleUpdateRsvpName}
+            value={nameInput}
+            onChange={e => setNameInput(e.target.value)}
             placeholder="Enter your full name"
             style={{
               width: '100%',
@@ -167,48 +89,27 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
           />
         </div>
         <button
-          onClick={handlers.handleLookupGuest}
-          disabled={model.rsvpName.trim() === ''}
+          onClick={handleFormSubmit}
+          disabled={nameInput.trim() === ''}
           style={{
-            background: model.rsvpName.trim() === '' ? '#ccc' : '#333',
+            background: nameInput.trim() === '' ? '#ccc' : '#333',
             color: 'white',
             border: 'none',
             padding: '12px 30px',
             fontSize: '1em',
             borderRadius: '2px',
-            cursor: model.rsvpName.trim() === '' ? 'not-allowed' : 'pointer',
+            cursor: nameInput.trim() === '' ? 'not-allowed' : 'pointer',
             fontFamily: "'Georgia', 'Times New Roman', serif",
             width: '100%'
           }}
         >
           {model.rsvpStep === 'guestNotFound' ? 'Try Again' : 'Find My Invitation'}
         </button>
-      </div>
+      </form>
     );
   }
 
-  if (model.rsvpStep === 'guestConfirmed' && model.confirmedGuest) {
-    const guest = model.confirmedGuest;
-
-    if (model.rsvpSubmitted) {
-      return (
-        <div
-          style={{
-            maxWidth: '500px',
-            margin: '30px auto',
-            background: '#d4edda',
-            color: '#155724',
-            padding: '15px',
-            borderRadius: '5px',
-            textAlign: 'center',
-            border: '1px solid #e0e0e0'
-          }}
-        >
-          Thank you! Your RSVP has been received. Total RSVPs: {model.rsvpCount}
-        </div>
-      );
-    }
-
+  if (!guestInfo.response) {
     return (
       <div
         style={{
@@ -231,7 +132,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
             textAlign: 'center'
           }}
         >
-          Welcome, {guest.firstName}!
+          Welcome, {guestInfo.firstName}!
         </div>
         <div style={{ marginBottom: '20px' }}>
           <label
@@ -245,7 +146,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
             Will you attend?
           </label>
           <select
-            onChange={handlers.handleUpdateAttending}
+            onChange={() => { }}
             value={model.rsvpAttending}
             style={{
               width: '100%',
@@ -260,7 +161,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
             <option value="notAttending">Sorry, can't make it</option>
           </select>
         </div>
-        {guest.response.plusOne && (
+        {/*guestInfo.partnerId &&*/ (
           <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
             <label
               style={{
@@ -282,7 +183,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
               <input
                 type="text"
                 value={model.rsvpPlusOneName}
-                onChange={handlers.handleUpdatePlusOneName}
+                onChange={() => { }}
                 placeholder="Guest name (optional)"
                 style={{
                   width: '100%',
@@ -300,7 +201,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
                   Will they attend?
                 </label>
                 <select
-                  onChange={handlers.handleUpdatePlusOneAttending}
+                  onChange={() => { }}
                   value={model.rsvpPlusOneAttending}
                   style={{
                     width: '100%',
@@ -319,7 +220,7 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
           </div>
         )}
         <button
-          onClick={handlers.handleSubmitRsvp}
+          onClick={() => { }}
           style={{
             background: '#333',
             color: 'white',
@@ -339,5 +240,94 @@ function renderRsvpForm(model: FrontendModel, handlers: RsvpHandlers): JSX.Eleme
     );
   }
 
-  return null;
+  return (
+    <div
+      style={{
+        maxWidth: '500px',
+        margin: '30px auto',
+        background: '#d4edda',
+        color: '#155724',
+        padding: '15px',
+        borderRadius: '5px',
+        textAlign: 'center',
+        border: '1px solid #e0e0e0'
+      }}
+    >
+      Thank you! Your RSVP has been received. Total RSVPs: {model.rsvpCount}
+    </div>
+  );
+
+  const handleUpdateAttending = (e: ChangeEvent<HTMLSelectElement>) => {
+    updateModel(prev => ({
+      ...prev,
+      rsvpAttending: e.target.value as 'attending' | 'notAttending'
+    }));
+  };
+
+  const handleUpdatePlusOneName = (e: ChangeEvent<HTMLInputElement>) => {
+    updateModel(prev => ({ ...prev, rsvpPlusOneName: e.target.value }));
+  };
+
+  const handleUpdatePlusOneAttending = (e: ChangeEvent<HTMLSelectElement>) => {
+    updateModel(prev => ({
+      ...prev,
+      rsvpPlusOneAttending: e.target.value as 'attending' | 'notAttending'
+    }));
+  };
+
+  const handleSubmitRsvp = () => {
+    if (model.rsvpStep === 'guestConfirmed') {
+      // const rsvp = {
+      //   guestName: model.confirmedGuest.name,
+      //   email: model.confirmedGuest.email,
+      //   attending: model.rsvpAttending,
+      //   plusOneName: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneName : null,
+      //   plusOneAttending: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneAttending : null
+      // };
+      // // sendToBackend({ type: 'submitRsvpToBackend', rsvp });
+      // updateModel(prev => ({ ...prev, rsvpSubmitted: true }));
+    }
+  };
+
+  // return (
+  //   <React.Fragment>
+  //     <div
+  //       style={{
+  //         background: 'white',
+  //         padding: '80px 20px',
+  //         textAlign: 'center',
+  //         minHeight: '60vh'
+  //       }}
+  //     >
+  //       <h2
+  //         style={{
+  //           fontSize: '2em',
+  //           marginBottom: '20px',
+  //           color: '#333',
+  //           fontWeight: '400',
+  //           fontFamily: "'Georgia', 'Times New Roman', serif"
+  //         }}
+  //       >
+  //         RSVP
+  //       </h2>
+  //       <p
+  //         style={{
+  //           color: '#666',
+  //           fontSize: '1.1em',
+  //           marginBottom: '40px',
+  //           fontFamily: "'Georgia', 'Times New Roman', serif"
+  //         }}
+  //       >
+  //         We'd love to celebrate with you!
+  //       </p>
+  //       {renderRsvpForm(model, {
+  //         handleLookupGuest,
+  //         handleUpdateAttending,
+  //         handleUpdatePlusOneName,
+  //         handleUpdatePlusOneAttending,
+  //         handleSubmitRsvp
+  //       })}
+  //     </div>
+  //   </React.Fragment>
+  // );
 }

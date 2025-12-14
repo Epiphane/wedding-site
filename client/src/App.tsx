@@ -10,6 +10,9 @@ import AdminPage from './pages/AdminPage';
 import CanvasPage from './pages/CanvasPage';
 import { AppProvider } from './context/AppContext';
 import { ClientToServerEvents, ServerToClientEvents } from '../../shared/types';
+import Header from './components/Header';
+import NavigationBar from './components/NavigationBar';
+import Footer from './components/Footer';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
@@ -17,18 +20,23 @@ function App(): JSX.Element {
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL);
-    socket.on('connect', () => {
-      setSocket(socket);
-    });
+    try {
+      const socket = io(SOCKET_URL);
+      socket.on('connect', () => {
+        setSocket(socket);
+      });
 
-    socket.on('disconnect', () => {
-      setSocket(null);
-    });
+      socket.on('disconnect', () => {
+        setSocket(null);
+      });
 
-    return () => {
-      socket.close();
-    };
+      return () => {
+        socket.close();
+      };
+    }
+    catch (e) {
+      console.log(e);
+    }
   }, []);
 
   if (!socket) {
@@ -43,6 +51,8 @@ function App(): JSX.Element {
       }}>
       <AppProvider socket={socket}>
         <React.StrictMode>
+          <Header />
+          <NavigationBar />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/rsvp" element={<RsvpPage />} />
@@ -51,6 +61,7 @@ function App(): JSX.Element {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/canvas" element={<CanvasPage />} />
           </Routes>
+          <Footer />
         </React.StrictMode>
       </AppProvider>
     </Router>
