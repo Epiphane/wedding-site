@@ -14,7 +14,7 @@ import Header from './components/Header';
 import NavigationBar from './components/NavigationBar';
 import Footer from './components/Footer';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || window.location.origin;
 
 function App(): JSX.Element {
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);

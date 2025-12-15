@@ -1,11 +1,10 @@
 import Koa from 'koa';
+import KoaStatic from 'koa-static';
 import bodyParser from 'koa-bodyparser';
 import http from 'http';
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
 
 import { DataSource } from "typeorm";
-import { development } from './db-settings';
 import GuestRouter from './routes';
 import Guest from './model/guest';
 import RSVP from './model/rsvp';
@@ -14,13 +13,10 @@ import DataSeeder from './seed/seed';
 import cors from '@koa/cors';
 import { ClientToServerEvents, ServerToClientEvents, SocketData, StickerProps } from '../shared/types';
 import GuestController from './controller/guest';
-
-dotenv.config();
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'thomas';
+import Config from './config';
 
 const AppDataSource = new DataSource({
-  ...development,
+  ...Config.database,
   entities: [Guest, RSVP, Sticker],
 })
 
@@ -37,6 +33,7 @@ AppDataSource.initialize()
     app.use(cors())
     app.use(bodyParser())
     app.use(GuestRouter.routes()).use(GuestRouter.allowedMethods());
+    app.use(KoaStatic(__dirname + '/../client'))
 
     const server = http.createServer(app.callback());
     const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, SocketData>(server, {
