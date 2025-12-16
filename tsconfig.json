@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "ESNext",
     "module": "commonjs",
     "lib": [
-      "es2020"
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
     ],
     "outDir": "./dist",
     "rootDir": "./",
@@ -13,18 +15,20 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
+    "isolatedModules": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "sourceMap": true
+    "sourceMap": true,
+    "jsx": "react-jsx",
   },
   "include": [
     "server/**/*",
-    "shared/*"
+    "shared/*",
+    "client/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "client"
+    "dist"
   ]
 }

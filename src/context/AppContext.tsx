@@ -1,13 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useDebugValue, useReducer } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useDebugValue, useReducer, JSX } from 'react';
 import { Socket } from 'socket.io-client';
 import { FrontendModel } from '../types';
-import { ClientToServerEvents, ServerToClientEvents } from '../../../shared/types';
+import { ClientToServerEvents, ServerToClientEvents } from '../../shared/types';
 import useLocalStorage from '../utils/useLocalStorage';
-import Guest from '../../../server/model/guest';
-import Sticker from '../../../server/model/sticker';
+import Guest from '../../server/model/guest';
+import Sticker from '../../server/model/sticker';
 import canvasReducer, { CanvasAction, CanvasState } from '../types/canvas';
-
-const BACKEND_URL = process.env.REACT_APP_SOCKET_URL || `http://${window.location.hostname}:3001`;
 
 interface AppContextType {
   request: (apiUrl: string, init?: RequestInit) => Promise<Response>;
@@ -80,7 +78,8 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
         }
       }
     }
-    return fetch(BACKEND_URL + '/api' + apiUrl, init);
+    const backendUrl = process.env.REACT_APP_SOCKET_URL || window.location.origin;
+    return fetch(backendUrl + '/api' + apiUrl, init);
   }
 
   const [canvas, updateCanvas] = useReducer(canvasReducer, [])

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, JSX } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import io from 'socket.io-client';
@@ -9,19 +9,18 @@ import SchedulePage from './pages/SchedulePage';
 import AdminPage from './pages/AdminPage';
 import CanvasPage from './pages/CanvasPage';
 import { AppProvider } from './context/AppContext';
-import { ClientToServerEvents, ServerToClientEvents } from '../../shared/types';
+import { ClientToServerEvents, ServerToClientEvents } from '../shared/types';
 import Header from './components/Header';
 import NavigationBar from './components/NavigationBar';
 import Footer from './components/Footer';
-
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || window.location.origin;
 
 function App(): JSX.Element {
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
 
   useEffect(() => {
     try {
-      const socket = io(SOCKET_URL);
+      let socketUrl = process.env.REACT_APP_SOCKET_URL || window.location.origin;
+      const socket = io(socketUrl);
       socket.on('connect', () => {
         setSocket(socket);
       });
