@@ -2,8 +2,7 @@
   "name": "wedding-site",
   "version": "1.0.0",
   "engines": {
-    "node": "v25.2.1",
-    "npm": "11.6.2"
+    "node": "24.x"
   },
   "description": "Wedding site converted from Elm to Node.js",
   "main": "dist/index.js",
