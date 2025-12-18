@@ -37,6 +37,12 @@ if (process.env.DATABASE_URL) {
 		password: connectionOptions.password,
 		database: connectionOptions.database || undefined,
 		synchronize: true,
+		ssl: {
+			rejectUnauthorized: false,
+		},
+		extra: {
+			ssl: true,
+		}
 	};
 	dbConfigs.prod = typeOrmOptions;
 }
