@@ -39,9 +39,6 @@ if (process.env.DATABASE_URL) {
 		synchronize: true,
 		ssl: {
 			rejectUnauthorized: false,
-		},
-		extra: {
-			ssl: true,
 		}
 	};
 	dbConfigs.prod = typeOrmOptions;
