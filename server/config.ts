@@ -45,7 +45,7 @@ if (process.env.DATABASE_URL) {
 		}
 	};
 	console.log(`Database URL: ${databaseUrl}`)
-	console.log(`Database options: ${connectionOptions}`)
+	console.log(`Database options: ${JSON.stringify(connectionOptions)}`)
 	dbConfigs.prod = typeOrmOptions;
 }
 
