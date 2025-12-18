@@ -15,6 +15,10 @@ import { ClientToServerEvents, ServerToClientEvents, SocketData, StickerProps } 
 import GuestController from './controller/guest';
 import Config from './config';
 
+console.log(`Database options: ${JSON.stringify({
+  ...Config.database,
+  entities: [Guest, RSVP, Sticker],
+})}`)
 const AppDataSource = new DataSource({
   ...Config.database,
   entities: [Guest, RSVP, Sticker],

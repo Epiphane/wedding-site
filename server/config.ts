@@ -44,8 +44,6 @@ if (process.env.DATABASE_URL) {
 			ssl: true,
 		}
 	};
-	console.log(`Database URL: ${databaseUrl}`)
-	console.log(`Database options: ${JSON.stringify(connectionOptions)}`)
 	dbConfigs.prod = typeOrmOptions;
 }
 
