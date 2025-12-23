@@ -1,13 +1,18 @@
-import React, { useEffect, useState, FormEvent } from 'react';
+import React, { useEffect, useState, FormEvent, JSX } from 'react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/Card';
-import Guest from '../../../server/model/guest';
+import Guest from '../../server/model/guest';
 
 const defaultGuest = {
+  id: 0,
   firstName: '',
   lastName: '',
   email: '',
   address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  gender: '',
   phone: '',
   plusOneAllowed: false,
 } as Guest;
@@ -39,6 +44,12 @@ export default function AdminPage(): JSX.Element {
           updateGuest={updateGuest}
           guestInfo={pendingGuest}
           isEditing={pendingGuest.id !== 0}
+          onSave={() => {
+            request(`/guests/${pendingGuest.id}`, {
+              method: 'PUT',
+              body: JSON.stringify(pendingGuest),
+            });
+          }}
           onCancel={() => {
             setPendingGuest(defaultGuest);
           }}
@@ -99,14 +110,7 @@ function AdminLoginForm(): JSX.Element {
           </div>
         )}
         <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              color: '#333',
-              fontWeight: 'bold'
-            }}
-          >
+          <label>
             Password
           </label>
           <input
@@ -150,37 +154,14 @@ type AdminGuestFormProps = {
   isEditing: boolean;
   guestInfo: Guest;
   updateGuest: (info: Partial<Guest>) => void;
+  onSave: () => void;
   onCancel: () => void;
 }
 
-function AdminGuestForm({ isEditing, guestInfo, updateGuest, onCancel }: AdminGuestFormProps): JSX.Element {
-  // const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-  //   updateModel(prev => ({ ...prev, adminFormName: e.target.value }));
-  // };
-
-  // const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-  //   updateModel(prev => ({ ...prev, adminFormEmail: e.target.value }));
-  // };
-
-  // const handlePlusOneChange = (e: ChangeEvent<HTMLInputElement>) => {
-  //   updateModel(prev => ({ ...prev, adminFormPlusOne: e.target.checked }));
-  // };
-
-
-  const handleSave = () => {
-    // const guest: Guest = {
-    //   name: model.adminFormName,
-    //   email: model.adminFormEmail,
-    //   plusOne: model.adminFormPlusOne
-    // };
-    // sendToBackend({ type: 'addOrUpdateGuest', guest });
-    // updateModel(prev => ({
-    //   ...prev,
-    //   adminFormName: '',
-    //   adminFormEmail: '',
-    //   adminFormPlusOne: false,
-    //   adminEditingGuest: null
-    // }));
+function AdminGuestForm({ isEditing, guestInfo, updateGuest, onSave, onCancel }: AdminGuestFormProps): JSX.Element {
+  const handleSave = (event: FormEvent | MouseEvent) => {
+    event.preventDefault();
+    onSave();
   };
 
   const [isGuestValid, setIsGuestValid] = useState(false);
@@ -192,167 +173,124 @@ function AdminGuestForm({ isEditing, guestInfo, updateGuest, onCancel }: AdminGu
     );
   }, [guestInfo]);
 
+  type AdminTextInputProps = {
+    prop: keyof Guest;
+    label?: string;
+    placeholder?: string;
+  }
+
+  function AdminTextInput({ prop, label, placeholder }: AdminTextInputProps) {
+    if (!label) {
+      label = prop[0].toUpperCase() + prop.substring(1);
+    }
+    placeholder = placeholder || label;
+
+    let inputType = 'text';
+    if (prop === 'email') { inputType = 'email'; }
+    if (prop === 'phone') { inputType = 'tel'; }
+
+    return (
+      <div>
+        <input
+          type={inputType}
+          value={guestInfo[prop] as string || ''}
+          onChange={e => updateGuest({ [prop]: e.target.value })}
+          placeholder={placeholder}
+        />
+      </div>
+    );
+  }
+
   return (
     <Card style={{ marginBottom: '30px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '20px',
-          marginBottom: '20px'
-        }}
-      >
-        <h2
+      <form onSubmit={handleSave}>
+        <div
           style={{
-            marginTop: '0',
-            color: '#333',
-            gridColumnStart: 1,
-            gridColumnEnd: 4,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '20px',
+            marginBottom: '20px'
           }}
         >
-          {isEditing ? 'Edit Guest' : 'Add New Guest'}
-        </h2>
-        <div>
-          <label
+          <h2
             style={{
-              display: 'block',
-              marginBottom: '5px',
+              marginTop: '0',
               color: '#333',
-              fontWeight: 'bold'
+              gridColumnStart: 1,
+              gridColumnEnd: 4,
             }}
           >
-            First Name
-          </label>
-          <input
-            type="text"
-            value={guestInfo.firstName}
-            onChange={e => {
-              updateGuest({ firstName: e.target.value });
-            }}
-            placeholder="First name"
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '5px',
-              fontSize: '1em',
-              boxSizing: 'border-box'
-            }}
-          />
+            {isEditing ? 'Edit Guest' : 'Add New Guest'}
+          </h2>
+          {AdminTextInput({ prop: 'firstName', label: "First Name" })}
+          {AdminTextInput({ prop: 'lastName', label: "Last Name" })}
+          {AdminTextInput({ prop: 'email' })}
+          {AdminTextInput({ prop: 'address' })}
+          {AdminTextInput({ prop: 'city' })}
+          {AdminTextInput({ prop: 'state' })}
+          {AdminTextInput({ prop: 'zipCode' })}
+          {AdminTextInput({ prop: 'gender' })}
+          {AdminTextInput({ prop: 'phone' })}
         </div>
-        <div>
+        <div style={{ marginBottom: '20px' }}>
           <label
             style={{
-              display: 'block',
-              marginBottom: '5px',
-              color: '#333',
-              fontWeight: 'bold'
-            }}
-          >
-            Last Name
-          </label>
-          <input
-            type="text"
-            value={guestInfo.lastName}
-            onChange={e => {
-              updateGuest({ lastName: e.target.value });
-            }}
-            placeholder="Last name"
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '5px',
-              fontSize: '1em',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              color: '#333',
-              fontWeight: 'bold'
-            }}
-          >
-            Email
-          </label>
-          <input
-            type="email"
-            value={guestInfo.email}
-            onChange={e => updateGuest({ email: e.target.value })}
-            placeholder="guest@example.com"
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '5px',
-              fontSize: '1em',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-      </div>
-      <div style={{ marginBottom: '20px' }}>
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer'
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={!!guestInfo.plusOneAllowed}
-            onChange={e => updateGuest({ plusOneAllowed: !guestInfo.plusOneAllowed })}
-            style={{
-              marginRight: '10px',
-              width: '20px',
-              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
               cursor: 'pointer'
             }}
-          />
-          Allow Plus One
-        </label>
-      </div>
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button
-          onClick={handleSave}
-          disabled={!isGuestValid}
-          style={{
-            background: (!isGuestValid) ? '#ccc' : '#333',
-            color: 'white',
-            border: 'none',
-            padding: '12px 30px',
-            fontSize: '1em',
-            borderRadius: '2px',
-            cursor: (!isGuestValid) ? 'not-allowed' : 'pointer',
-            fontFamily: "'Georgia', 'Times New Roman', serif",
-            flex: '1'
-          }}
-        >
-          Save Guest
-        </button>
-        {isEditing && (
+          >
+            <input
+              type="checkbox"
+              checked={!!guestInfo.plusOneAllowed}
+              onChange={e => updateGuest({ plusOneAllowed: !guestInfo.plusOneAllowed })}
+              style={{
+                marginRight: '10px',
+                width: '20px',
+                height: '20px',
+                cursor: 'pointer'
+              }}
+            />
+            Allow Plus One
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={onCancel}
+            onClick={handleSave}
+            disabled={!isGuestValid}
             style={{
-              background: '#666',
+              background: (!isGuestValid) ? '#ccc' : '#333',
               color: 'white',
               border: 'none',
               padding: '12px 30px',
               fontSize: '1em',
               borderRadius: '2px',
-              cursor: 'pointer',
-              fontFamily: "'Georgia', 'Times New Roman', serif"
+              cursor: (!isGuestValid) ? 'not-allowed' : 'pointer',
+              fontFamily: "'Georgia', 'Times New Roman', serif",
+              flex: '1'
             }}
           >
-            Cancel
+            Save Guest
           </button>
-        )}
-      </div>
+          {isEditing && (
+            <button
+              onClick={onCancel}
+              style={{
+                background: '#666',
+                color: 'white',
+                border: 'none',
+                padding: '12px 30px',
+                fontSize: '1em',
+                borderRadius: '2px',
+                cursor: 'pointer',
+                fontFamily: "'Georgia', 'Times New Roman', serif"
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
     </Card>
   );
 }

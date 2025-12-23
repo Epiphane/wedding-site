@@ -37,10 +37,10 @@ AppDataSource.initialize()
     app.use(cors())
     app.use(bodyParser())
     app.use(GuestRouter.routes()).use(GuestRouter.allowedMethods());
-    app.use(KoaStatic(__dirname + '/../client'))
+    app.use(KoaStatic(Config.clientPath))
 
     app.use(async (ctx, next) => {
-      return await KoaStatic(__dirname + '/../client')(Object.assign(ctx, { path: 'index.html' }), next);
+      return await KoaStatic(Config.clientPath)(Object.assign(ctx, { path: 'index.html' }), next);
     });
 
     const server = http.createServer(app.callback());

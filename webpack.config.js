@@ -2,6 +2,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const { DefinePlugin } = require("webpack");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   entry: "./src/index.tsx",
@@ -54,6 +55,14 @@ module.exports = {
     }),
     new DefinePlugin({
       'process.env.REACT_APP_SOCKET_URL': JSON.stringify(''),
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'public',
+          filter: (filepath) => !filepath.includes('index.html'),
+        }
+      ]
     })
   ],
   devServer: {

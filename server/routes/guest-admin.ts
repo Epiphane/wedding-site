@@ -3,7 +3,6 @@ import { SwaggerRouter } from "koa-swagger-decorator";
 import { Not, Equal } from "typeorm";
 import Guest from "../model/guest";
 
-
 const GuestAdminRouter = new SwaggerRouter({ prefix: '/guests' });
 
 GuestAdminRouter.get('/', async (ctx) => {
@@ -39,10 +38,9 @@ GuestAdminRouter.post('/', async ctx => {
 
 GuestAdminRouter.put('/:id', async ctx => {
   const guest = await Guest.findOneByOrFail({ id: +ctx.params.id });
-  const { firstName, lastName, email } = ctx.request.body as any;
-  guest.firstName = firstName;
-  guest.lastName = lastName;
-  guest.email = email;
+  const request = Guest.create(ctx.request.body as Partial<Guest>)
+  await validateOrReject(request, { skipNullProperties: true, skipUndefinedProperties: true, skipMissingProperties: true, whitelist: true });
+  Object.assign(guest, request);
   await validateOrReject(guest);
 
   if (await Guest.findOneBy({ id: Not(Equal(guest.id)), email: guest.email })) {

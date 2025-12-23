@@ -75,6 +75,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
         headers: {
           ...init?.headers,
           Authorization: `Basic ${btoa(`user:${adminPassword}`)}`,
+          'Content-Type': 'application/json'
         }
       }
     }

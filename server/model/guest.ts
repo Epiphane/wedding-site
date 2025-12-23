@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOne, OneToMany, PrimaryColumn, FindOptionsWhere, Unique, ILike } from "typeorm"
 import RSVP from "./rsvp"
-import { IsBoolean, IsEmail, IsPhoneNumber, IsString } from "class-validator"
+import { IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString } from "class-validator"
 import Sticker from "./sticker"
 
 @Entity()
@@ -19,6 +19,7 @@ export default class Guest extends BaseEntity {
 
   @Column({ nullable: true })
   @IsString()
+  @IsOptional()
   gender: string
 
   @Column({ default: '' })
@@ -27,15 +28,33 @@ export default class Guest extends BaseEntity {
 
   @Column()
   @IsEmail()
+  @IsOptional()
   email: string
 
   @Column({ nullable: true })
-  @IsPhoneNumber()
+  @IsString()
+  @IsOptional()
   phone: string
 
   @Column({ nullable: true })
   @IsString()
+  @IsOptional()
   address: string
+
+  @Column({ nullable: true })
+  @IsString()
+  @IsOptional()
+  city: string
+
+  @Column({ nullable: true })
+  @IsString()
+  @IsOptional()
+  state: string
+
+  @Column({ nullable: true })
+  @IsString()
+  @IsOptional()
+  zipCode: string
 
   @Column({ default: false })
   @IsBoolean()

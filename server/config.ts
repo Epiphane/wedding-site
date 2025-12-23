@@ -49,9 +49,15 @@ if (process.env.NODE_ENV === 'prod') {
 	env = process.env.NODE_ENV;
 }
 
+const clientPaths = {
+	dev: __dirname + '/../dist/client',
+	prod: __dirname + '/../client',
+}
+
 export default {
 	env,
 	port: process.env.PORT || 3001,
 	database: dbConfigs[env],
 	adminPassword: process.env.ADMIN_PASSWORD || 'thomas',
+	clientPath: clientPaths[env],
 };

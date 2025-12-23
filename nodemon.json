@@ -3,7 +3,7 @@
     "server",
     "shared"
   ],
-  "ext": "ts",
+  "ext": "ts tsx css",
   "ignore": [
     "server/**/*.spec.ts"
   ],
