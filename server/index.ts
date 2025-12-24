@@ -27,23 +27,23 @@ const AppDataSource = new DataSource({
 AppDataSource.initialize()
   .then(async connection => {
 
-    const guests = await Guest.find({ relations: { people: true } })
-    guests.forEach(async guest => {
-      console.log('migrating person', guest.firstName, guest.lastName)
-      if (!guest.people || guest.people.length === 0) {
-        guest.people = [
-          Person.create({
-            firstName: guest.firstName,
-            lastName: guest.lastName,
-            email: guest.email,
-            phone: guest.phone,
-          })
-        ]
-        await guest.save();
-      }
-    })
-    // console.log('guests', guests);
-    return;
+    // const guests = await Guest.find({ relations: { people: true } })
+    // guests.forEach(async guest => {
+    //   console.log('migrating person', guest.firstName, guest.lastName)
+    //   if (!guest.people || guest.people.length === 0) {
+    //     guest.people = [
+    //       Person.create({
+    //         firstName: guest.firstName,
+    //         lastName: guest.lastName,
+    //         email: guest.email,
+    //         phone: guest.phone,
+    //       })
+    //     ]
+    //     await guest.save();
+    //   }
+    // })
+    // // console.log('guests', guests);
+    // return;
 
     const numGuests = await Guest.count();
     if (numGuests === 0) {
