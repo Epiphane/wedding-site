@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOne, OneToMany, PrimaryColumn, FindOptionsWhere, Unique, ILike } from "typeorm"
 import RSVP from "./rsvp"
-import { IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString } from "class-validator"
+import { IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString, ValidateIf } from "class-validator"
 import Sticker from "./sticker"
 
 @Entity()
@@ -24,11 +24,11 @@ export default class Guest extends BaseEntity {
 
   @Column({ default: '' })
   @IsString()
-  lodgingOptions: string
+  lodgingOptions: string = '';
 
   @Column()
   @IsEmail()
-  @IsOptional()
+  @ValidateIf((o, value) => value !== null && value !== undefined && value !== '')
   email: string
 
   @Column({ nullable: true })
@@ -58,18 +58,20 @@ export default class Guest extends BaseEntity {
 
   @Column({ default: false })
   @IsBoolean()
-  plusOneAllowed: boolean;
+  plusOneAllowed: boolean = false;
 
   @Column({ default: false })
   @IsBoolean()
-  saveTheDateSent: boolean;
+  saveTheDateSent: boolean = false;
 
   @Column({ default: false })
   @IsBoolean()
-  inviteSent: boolean;
+  inviteSent: boolean = false;
 
   @Column({ nullable: true })
-  partnerId: number;
+  @IsNumber()
+  @IsOptional()
+  partnerId: number | null;
 
   @OneToOne(() => Guest, (other) => other.partner)
   @JoinColumn()
@@ -117,7 +119,7 @@ export default class Guest extends BaseEntity {
   }
 
   toJSON() {
-    const { partnerId, ...rest } = this as any;
+    const { ...rest } = this as any;
     return { ...rest };
   }
 }
