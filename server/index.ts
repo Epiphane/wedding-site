@@ -18,7 +18,6 @@ import Person from './model/person';
 
 console.log(`Database options: ${JSON.stringify({
   ...Config.database,
-  entities: [Guest, RSVP, Sticker, Person],
 })}`)
 const AppDataSource = new DataSource({
   ...Config.database,
