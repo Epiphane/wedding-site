@@ -375,10 +375,10 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
               <tr key={index} style={{ borderTop: '1px solid #e9ecef' }}>
                 <td>{guest.firstName}</td>
                 <td>{guest.lastName}</td>
-                <td>{guest.email ? '✓' : '✗'}</td>
+                <td>{guest.email ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
-                <td>{guest.address ? '✓' : '✗'}</td>
-                <td>{guest.phone ? '✓' : '✗'}</td>
+                <td>{guest.address ? '✓' : ''}</td>
+                <td>{guest.phone ? '✓' : ''}</td>
                 <td>
                   <button onClick={() => onEdit(guest)}>
                     Edit
