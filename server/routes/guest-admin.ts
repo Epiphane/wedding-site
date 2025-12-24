@@ -14,7 +14,8 @@ GuestAdminRouter.get('/:id', async (ctx) => {
   const guest = await Guest.findOneBy({ id: +ctx.params.id });
   if (guest) {
     ctx.status = 200;
-    ctx.body = guest;
+    ctx.body = guest.toJSON();
+    ctx.body.people = await guest.people;
   } else {
     ctx.status = 404;
     ctx.body = "Guest not found";
@@ -23,7 +24,6 @@ GuestAdminRouter.get('/:id', async (ctx) => {
 
 GuestAdminRouter.post('/', async ctx => {
   const guest = Guest.create(ctx.request.body as Guest);
-  console.log(guest);
   await validateOrReject(guest, { whitelist: true });
 
   guest.plusOneAllowed = guest.partnerId === null;

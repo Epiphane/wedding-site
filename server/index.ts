@@ -14,18 +14,38 @@ import cors from '@koa/cors';
 import { ClientToServerEvents, ServerToClientEvents, SocketData, StickerProps } from '../shared/types';
 import GuestController from './controller/guest';
 import Config from './config';
+import Person from './model/person';
 
 console.log(`Database options: ${JSON.stringify({
   ...Config.database,
-  entities: [Guest, RSVP, Sticker],
+  entities: [Guest, RSVP, Sticker, Person],
 })}`)
 const AppDataSource = new DataSource({
   ...Config.database,
-  entities: [Guest, RSVP, Sticker],
+  entities: [Guest, RSVP, Sticker, Person],
 })
 
 AppDataSource.initialize()
   .then(async connection => {
+
+    const guests = await Guest.find({ relations: { people: true } })
+    guests.forEach(async guest => {
+      console.log('migrating person', guest.firstName, guest.lastName)
+      if (!guest.people || guest.people.length === 0) {
+        guest.people = [
+          Person.create({
+            firstName: guest.firstName,
+            lastName: guest.lastName,
+            email: guest.email,
+            phone: guest.phone,
+          })
+        ]
+        await guest.save();
+      }
+    })
+    // console.log('guests', guests);
+    return;
+
     const numGuests = await Guest.count();
     if (numGuests === 0) {
       await new DataSeeder().run(connection);

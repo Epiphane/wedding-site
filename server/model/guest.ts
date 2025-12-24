@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, OneToOn
 import RSVP from "./rsvp"
 import { IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString, ValidateIf } from "class-validator"
 import Sticker from "./sticker"
+import Person from "./person"
 
 @Entity()
 @Unique(['firstName', 'lastName'])
@@ -80,6 +81,9 @@ export default class Guest extends BaseEntity {
   @OneToOne(() => RSVP, { eager: true, cascade: true, })
   @JoinColumn()
   response: RSVP
+
+  @OneToMany(() => Person, (person) => person.guest, { cascade: true })
+  people: Person[];
 
   @OneToMany(() => Sticker, (sticker) => sticker.owner, { lazy: true })
   @JoinColumn()
