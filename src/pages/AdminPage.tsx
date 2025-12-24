@@ -1,4 +1,4 @@
-import React, { useEffect, useState, FormEvent, JSX, ChangeEvent } from 'react';
+import React, { useEffect, useState, FormEvent, JSX, ChangeEvent, MouseEvent } from 'react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/Card';
 import Guest from '../../server/model/guest';
@@ -236,6 +236,15 @@ function AdminGuestForm({ isEditing, guestInfo, guestList, updateGuest, onSave, 
     }
   }
 
+  const onCopyPartner = (e: MouseEvent) => {
+    e.preventDefault();
+    const partner = guestList.find(guest => guest.id === guestInfo.partnerId)!;
+    const { address, phone, lodgingOptions, city, state, zipCode, saveTheDateSent, inviteSent } = partner;
+    updateGuest({
+      address, phone, lodgingOptions, city, state, zipCode, saveTheDateSent, inviteSent
+    })
+  }
+
   return (
     <Card style={{ marginBottom: '30px' }}>
       <form className='admin-form' onSubmit={handleSave}>
@@ -270,12 +279,20 @@ function AdminGuestForm({ isEditing, guestInfo, guestList, updateGuest, onSave, 
           </select>
         </div>
         <div>
-          <input
-            type="checkbox"
-            checked={!!guestInfo.plusOneAllowed}
-            onChange={e => updateGuest({ plusOneAllowed: !guestInfo.plusOneAllowed })}
-          />
-          Allow Plus One
+          {guestInfo.partnerId ?
+            (<button className='btn-primary'
+              onClick={onCopyPartner}>
+              Copy from partner
+            </button>)
+            :
+            (<React.Fragment><input
+              type="checkbox"
+              checked={!!guestInfo.plusOneAllowed}
+              onChange={e => updateGuest({ plusOneAllowed: !guestInfo.plusOneAllowed })}
+            />
+              Allow Plus One
+            </React.Fragment>)
+          }
         </div>
         <div style={{ gridColumn: '1 / -1', display: 'flex' }}>
           <button className='btn-primary btn-lg'

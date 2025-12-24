@@ -26,7 +26,7 @@ GuestAdminRouter.post('/', async ctx => {
   console.log(guest);
   await validateOrReject(guest, { whitelist: true });
 
-  guest.plusOneAllowed = guest.partnerId !== null;
+  guest.plusOneAllowed = guest.partnerId === null;
 
   ctx.status = 201;
   ctx.body = await guest.save();
@@ -38,15 +38,8 @@ GuestAdminRouter.post('/', async ctx => {
     await newPartner.save();
   }
 
-  // if (await Guest.findOneBy({ email: guest.email })) {
-  //   // return BAD REQUEST status code and email already exists error
-  //   ctx.status = 400;
-  //   ctx.body = "The specified e-mail address already exists";
-  // } else {
-  // save the guest contained in the POST body
   ctx.status = 201;
   ctx.body = await guest.save();
-  // }
 });
 
 GuestAdminRouter.put('/:id', async ctx => {
@@ -71,7 +64,7 @@ GuestAdminRouter.put('/:id', async ctx => {
       await newPartner.save();
     }
 
-    guest.plusOneAllowed = guest.partnerId !== null;
+    guest.plusOneAllowed = guest.partnerId === null;
   }
 
   if (await Guest.findOneBy({ id: Not(Equal(guest.id)), email: guest.email })) {
