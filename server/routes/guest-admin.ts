@@ -24,19 +24,20 @@ GuestAdminRouter.get('/:id', async (ctx) => {
 
 GuestAdminRouter.post('/', async ctx => {
   const guest = Guest.create(ctx.request.body as Guest);
+  console.log(guest);
   await validateOrReject(guest, { whitelist: true });
 
-  guest.plusOneAllowed = guest.partnerId === null;
+  console.log(guest);
 
   ctx.status = 201;
   ctx.body = await guest.save();
 
-  if (guest.partnerId !== null) {
-    const newPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
-    newPartner.partnerId = guest.id;
-    newPartner.plusOneAllowed = false;
-    await newPartner.save();
-  }
+  // if (guest.partnerId !== null) {
+  //   const newPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
+  //   newPartner.partnerId = guest.id;
+  //   newPartner.plusOneAllowed = false;
+  //   await newPartner.save();
+  // }
 
   ctx.status = 201;
   ctx.body = await guest.save();
@@ -44,36 +45,31 @@ GuestAdminRouter.post('/', async ctx => {
 
 GuestAdminRouter.put('/:id', async ctx => {
   const guest = await Guest.findOneByOrFail({ id: +ctx.params.id });
-  const oldPartnerId = guest.partnerId;
+  // const oldPartnerId = guest.partnerId;
   const request = Guest.create<Guest>(ctx.request.body as Partial<Guest>);
   await validateOrReject(request, { skipNullProperties: true, skipUndefinedProperties: true, skipMissingProperties: true, whitelist: true });
   Object.assign(guest, request);
   await validateOrReject(guest);
 
-  if (guest.partnerId !== oldPartnerId) {
-    if (oldPartnerId !== null) {
-      const oldPartner = await Guest.findOneByOrFail({ id: oldPartnerId });
-      oldPartner.partnerId = null;
-      await oldPartner.save();
-    }
+  // if (guest.partnerId !== oldPartnerId) {
+  //   if (oldPartnerId !== null) {
+  //     const oldPartner = await Guest.findOneByOrFail({ id: oldPartnerId });
+  //     oldPartner.partnerId = null;
+  //     await oldPartner.save();
+  //   }
 
-    if (guest.partnerId !== null) {
-      const newPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
-      newPartner.partnerId = guest.id;
-      newPartner.plusOneAllowed = false;
-      await newPartner.save();
-    }
+  //   if (guest.partnerId !== null) {
+  //     const newPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
+  //     newPartner.partnerId = guest.id;
+  //     newPartner.plusOneAllowed = false;
+  //     await newPartner.save();
+  //   }
 
-    guest.plusOneAllowed = guest.partnerId === null;
-  }
+  //   guest.plusOneAllowed = guest.partnerId === null;
+  // }
 
-  if (await Guest.findOneBy({ id: Not(Equal(guest.id)), email: guest.email })) {
-    ctx.status = 400;
-    ctx.body = "The specified e-mail address already exists";
-  } else {
-    ctx.status = 201;
-    ctx.body = await guest.save();
-  }
+  ctx.status = 201;
+  ctx.body = await guest.save();
 });
 
 GuestAdminRouter.delete('/:id', async ctx => {
@@ -82,11 +78,14 @@ GuestAdminRouter.delete('/:id', async ctx => {
     ctx.status = 404;
     ctx.body = "The guest you are trying to delete doesn't exist in the db";
   } else {
-    if (guest.partnerId) {
-      const oldPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
-      oldPartner.partnerId = null;
-      await oldPartner.save();
-    }
+    // if (guest.partnerId) {
+    //   const oldPartner = await Guest.findOneByOrFail({ id: guest.partnerId });
+    //   oldPartner.partnerId = null;
+    //   await oldPartner.save();
+    // }
+
+    guest.people = [];
+    await guest.save();
 
     await guest.remove();
     ctx.status = 204;

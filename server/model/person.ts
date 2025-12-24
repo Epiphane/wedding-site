@@ -26,12 +26,15 @@ export default class Person extends BaseEntity {
   @IsOptional()
   phone: string
 
-  @ManyToOne(() => Guest, guest => guest.people)
+  @ManyToOne(() => Guest, guest => guest.people, {
+    nullable: false,
+    orphanedRowAction: 'delete',
+  })
   guest: Guest
 
   static async findByName(name: string): Promise<Person | null> {
     const [firstName, lastName] = name.trim().split(' ');
-    let options = { firstName: ILike(firstName) } as FindOptionsWhere<Guest>;
+    let options = { firstName: ILike(firstName) } as FindOptionsWhere<Person>;
     if (lastName) {
       options.lastName = ILike(lastName);
     }

@@ -85,11 +85,31 @@ nav>div>a.active {
   touch-action: none;
 }
 
+.page-content {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
 .admin-form {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
   margin-bottom: 20px;
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead>tr {
+  background: #f8f9fa;
+}
+
+tr {
+  border-top: 1px solid #e9ecef;
 }
 
 th {
