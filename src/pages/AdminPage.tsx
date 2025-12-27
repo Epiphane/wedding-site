@@ -69,12 +69,12 @@ export default function AdminPage(): JSX.Element {
             });
 
           req.then(() => {
-            setPendingGuest(defaultGuest);
+            setPendingGuest({ ...defaultGuest } as Guest);
             fetchGuests()
           })
         }}
         onCancel={() => {
-          setPendingGuest(defaultGuest);
+          setPendingGuest({ ...defaultGuest } as Guest);
         }}
       />
       {guestList && <AdminGuestList guestList={guestList}
@@ -278,6 +278,16 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
   }
 
   const [confirmDelete, setConfirmDelete] = useState(0);
+  const [guestFilter, setGuestFilter] = useState('');
+
+  const matchFilter = (person: Person) => {
+    if (guestFilter === '') {
+      return true;
+    }
+
+    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
+    return fullName.indexOf(guestFilter.toLowerCase()) >= 0;
+  }
 
   return (
     <Card style={{ padding: '0', overflow: 'hidden' }}>
@@ -289,8 +299,14 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
           borderBottom: '2px solid #f0f0f0'
         }}
       >
-        Guest List ({guestList.length} guests)
+        Guest List ({guestList.reduce((prev, guest) => prev + guest.people.length, 0)} guests)
       </h2>
+      <input
+        type='test'
+        value={guestFilter}
+        onChange={e => setGuestFilter(e.target.value)}
+        placeholder='Filter'
+      />
       {guestList.length === 0 ? (
         <div
           style={{
@@ -316,7 +332,10 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
           </thead>
           <tbody>
             {guestList.map((guest, index) => (
-              <tr key={index} style={{ borderTop: '1px solid #e9ecef' }}>
+              <tr key={index} style={{
+                borderTop: '1px solid #e9ecef',
+                visibility: guest.people.some(person => matchFilter(person)) ? 'visible' : 'collapse'
+              }}>
                 <td>{guest.people.map(g => <div>{g.firstName}</div>)}</td>
                 <td>{guest.people.map(g => <div>{g.lastName}</div>)}</td>
                 <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
