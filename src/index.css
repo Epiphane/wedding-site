@@ -128,7 +128,7 @@ td.email {
 }
 
 label {
-  display: flex;
+  display: inline;
   align-items: center;
   cursor: pointer;
 }

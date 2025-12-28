@@ -20,6 +20,7 @@ const defaultGuest = {
   state: '',
   zipCode: '',
   additionalGuests: 0,
+  children: 0,
   people: [defaultPerson],
 } as Guest;
 
@@ -231,11 +232,23 @@ function AdminGuestForm({ guestInfo, onSave, onCancel }: AdminGuestFormProps): J
         {AdminTextInput({ prop: 'state' })}
         {AdminTextInput({ prop: 'zipCode' })}
         <div>
+          <label>Additional: </label>
           <input
             type='number'
+            style={{ width: '50%' }}
             value={guest.additionalGuests}
             onChange={e => updateGuest({ additionalGuests: +e.target.value })}
-            placeholder={'Extra Guests?'}
+            placeholder='Additional'
+          />
+        </div>
+        <div>
+          <label>Children: </label>
+          <input
+            type='number'
+            style={{ width: '50%' }}
+            value={guest.children}
+            onChange={e => updateGuest({ children: +e.target.value })}
+            placeholder='Children'
           />
         </div>
         <div style={{ gridColumn: '1 / -1', display: 'flex' }}>
