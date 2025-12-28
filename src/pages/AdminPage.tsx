@@ -334,7 +334,7 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
     return true;
   }
 
-  const minGuests = guestList.reduce((prev, guest) => prev + guest.people.length, 0);
+  const minGuests = guestList.reduce((prev, guest) => prev + guest.people.length + guest.children, 0);
   const maxGuests = guestList.reduce((prev, guest) => prev + guest.people.length + guest.additionalGuests, 0);
 
   return (
