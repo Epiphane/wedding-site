@@ -289,6 +289,9 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
     return fullName.indexOf(guestFilter.toLowerCase()) >= 0;
   }
 
+  const minGuests = guestList.reduce((prev, guest) => prev + guest.people.length, 0);
+  const maxGuests = guestList.reduce((prev, guest) => prev + guest.people.length + guest.additionalGuests, 0);
+
   return (
     <Card style={{ padding: '0', overflow: 'hidden' }}>
       <h2
@@ -299,7 +302,7 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
           borderBottom: '2px solid #f0f0f0'
         }}
       >
-        Guest List ({guestList.reduce((prev, guest) => prev + guest.people.length, 0)} guests)
+        Guest List ({minGuests}~{maxGuests} guests)
       </h2>
       <input
         type='test'
