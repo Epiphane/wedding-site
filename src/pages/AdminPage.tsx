@@ -391,8 +391,8 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
                 </td>
                 <td>
                   {guest.people.map((g, i) => <div key={i}>{g.lastName}</div>)}
-                  {guest.additionalGuests ? <div></div> : ''}
-                  {guest.children ? <div></div> : ''}
+                  {guest.additionalGuests ? <br /> : ''}
+                  {guest.children ? <br /> : ''}
                 </td>
                 <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
