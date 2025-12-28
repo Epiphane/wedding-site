@@ -389,7 +389,11 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
                   {guest.additionalGuests ? <div>+{guest.additionalGuests} Extra</div> : ''}
                   {guest.children ? <div>+{guest.children} Children</div> : ''}
                 </td>
-                <td>{guest.people.map((g, i) => <div key={i}>{g.lastName}</div>)}</td>
+                <td>
+                  {guest.people.map((g, i) => <div key={i}>{g.lastName}</div>)}
+                  {guest.additionalGuests ? <div></div> : ''}
+                  {guest.children ? <div></div> : ''}
+                </td>
                 <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
                 <td>{guest.address ? '✓' : ''}</td>
