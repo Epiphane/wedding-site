@@ -280,13 +280,45 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
   const [confirmDelete, setConfirmDelete] = useState(0);
   const [guestFilter, setGuestFilter] = useState('');
 
-  const matchFilter = (person: Person) => {
-    if (guestFilter === '') {
+  const matchFilter = (guest: Guest) => {
+    const tokens = guestFilter.split(' ');
+    if (tokens.length === 0) {
       return true;
     }
 
-    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
-    return fullName.indexOf(guestFilter.toLowerCase()) >= 0;
+    for (const token of tokens) {
+      if (token.startsWith('no:')) {
+        if (token === 'no:phone') {
+          if (guest.people.some(person => !!person.phone)) {
+            return false;
+          }
+        }
+        else if (token === 'no:email') {
+          if (guest.people.some(person => !!person.email)) {
+            return false;
+          }
+        }
+        else if (token === 'no:address') {
+          if (!!guest.address) {
+            return false;
+          }
+        }
+        else if (token === 'no:response') {
+          if (!!guest.response) {
+            return false;
+          }
+        }
+      }
+      else {
+        if (!guest.people.some(person =>
+          person.firstName.toLowerCase().indexOf(token.toLowerCase()) >= 0 ||
+          person.lastName.toLowerCase().indexOf(token.toLowerCase()) >= 0)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   const minGuests = guestList.reduce((prev, guest) => prev + guest.people.length, 0);
@@ -337,10 +369,10 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
             {guestList.map((guest, index) => (
               <tr key={index} style={{
                 borderTop: '1px solid #e9ecef',
-                visibility: guest.people.some(person => matchFilter(person)) ? 'visible' : 'collapse'
+                visibility: matchFilter(guest) ? 'visible' : 'collapse'
               }}>
-                <td>{guest.people.map(g => <div>{g.firstName}</div>)}</td>
-                <td>{guest.people.map(g => <div>{g.lastName}</div>)}</td>
+                <td>{guest.people.map((g, i) => <div key={i}>{g.firstName}</div>)}</td>
+                <td>{guest.people.map((g, i) => <div key={i}>{g.lastName}</div>)}</td>
                 <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
                 <td>{guest.address ? '✓' : ''}</td>
