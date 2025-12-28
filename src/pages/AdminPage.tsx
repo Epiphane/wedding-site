@@ -384,7 +384,11 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
                 borderTop: '1px solid #e9ecef',
                 visibility: matchFilter(guest) ? 'visible' : 'collapse'
               }}>
-                <td>{guest.people.map((g, i) => <div key={i}>{g.firstName}</div>)}</td>
+                <td>
+                  {guest.people.map((g, i) => <div key={i}>{g.firstName}</div>)}
+                  {guest.additionalGuests && <div>+{guest.additionalGuests} Additional</div>}
+                  {guest.children && <div>+{guest.children} Children</div>}
+                </td>
                 <td>{guest.people.map((g, i) => <div key={i}>{g.lastName}</div>)}</td>
                 <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
