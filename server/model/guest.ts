@@ -41,6 +41,11 @@ export default class Guest extends BaseEntity {
   @IsNumber()
   children: number = 0;
 
+  @Column({ default: '' })
+  @IsString()
+  @IsOptional()
+  notes: string = '';
+
   @Column({ default: false })
   @IsBoolean()
   saveTheDateSent: boolean = false;

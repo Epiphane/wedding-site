@@ -21,6 +21,7 @@ const defaultGuest = {
   zipCode: '',
   additionalGuests: 0,
   children: 0,
+  notes: '',
   people: [defaultPerson],
 } as Guest;
 
@@ -251,6 +252,7 @@ function AdminGuestForm({ guestInfo, onSave, onCancel }: AdminGuestFormProps): J
             placeholder='Children'
           />
         </div>
+        {AdminTextInput({ prop: 'notes' })}
         <div style={{ gridColumn: '1 / -1', display: 'flex' }}>
           <button className='btn-primary btn-lg'
             onClick={handleSave}
@@ -321,14 +323,21 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
             return false;
           }
         }
+
+        continue;
       }
-      else {
-        if (!guest.people.some(person =>
-          person.firstName.toLowerCase().indexOf(token.toLowerCase()) >= 0 ||
-          person.lastName.toLowerCase().indexOf(token.toLowerCase()) >= 0)) {
-          return false;
-        }
+
+      if (guest.notes.toLowerCase().indexOf(token.toLowerCase()) >= 0) {
+        continue;
       }
+
+      if (guest.people.some(person =>
+        person.firstName.toLowerCase().indexOf(token.toLowerCase()) >= 0 ||
+        person.lastName.toLowerCase().indexOf(token.toLowerCase()) >= 0)) {
+        continue;
+      }
+
+      return false;
     }
 
     return true;
@@ -375,6 +384,7 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
               <th>Response</th>
               <th>Address</th>
               <th>Phone</th>
+              <th>Notes</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -398,6 +408,7 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
                 <td>{ResponseOutput(guest)}</td>
                 <td>{guest.address ? '✓' : ''}</td>
                 <td>{guest.people.some(g => !!g.phone) ? '✓' : ''}</td>
+                <td>{guest.notes}</td>
                 <td>
                   <button onClick={() => onEdit(guest)}>
                     Edit
