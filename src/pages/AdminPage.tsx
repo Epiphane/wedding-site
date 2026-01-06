@@ -323,6 +323,11 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
             return false;
           }
         }
+        else if (token === 'no:notes') {
+          if (!!guest.notes) {
+            return false;
+          }
+        }
 
         continue;
       }
