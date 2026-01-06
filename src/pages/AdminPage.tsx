@@ -295,6 +295,31 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
   const [confirmDelete, setConfirmDelete] = useState(0);
   const [guestFilter, setGuestFilter] = useState('');
 
+  const matchField = (guest: Guest, field: string, hasField: boolean) => {
+    let guestHasField: boolean;
+    if (field === 'phone') {
+      guestHasField = guest.people.some(person => !!person.phone);
+    }
+    else if (field === 'email') {
+      guestHasField = guest.people.some(person => !!person.email);
+    }
+    else if (field === 'address') {
+      guestHasField = !!guest.address;
+    }
+    else if (field === 'response') {
+      guestHasField = !!guest.response;
+    }
+    else if (field === 'notes') {
+      guestHasField = !!guest.notes;
+    }
+    else {
+      // Unrecognized fields are ignored
+      return true;
+    }
+
+    return guestHasField === hasField
+  }
+
   const matchFilter = (guest: Guest) => {
     const tokens = guestFilter.split(' ');
     if (tokens.length === 0) {
@@ -302,31 +327,10 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
     }
 
     for (const token of tokens) {
-      if (token.startsWith('no:')) {
-        if (token === 'no:phone') {
-          if (guest.people.some(person => !!person.phone)) {
-            return false;
-          }
-        }
-        else if (token === 'no:email') {
-          if (guest.people.some(person => !!person.email)) {
-            return false;
-          }
-        }
-        else if (token === 'no:address') {
-          if (!!guest.address) {
-            return false;
-          }
-        }
-        else if (token === 'no:response') {
-          if (!!guest.response) {
-            return false;
-          }
-        }
-        else if (token === 'no:notes') {
-          if (!!guest.notes) {
-            return false;
-          }
+      if (token.startsWith('no:') || token.startsWith('has:')) {
+        const [wantsField, field] = token.split(':');
+        if (!matchField(guest, field, wantsField === 'has')) {
+          return false;
         }
 
         continue;
