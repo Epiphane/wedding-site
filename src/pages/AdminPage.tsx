@@ -352,8 +352,36 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
     return true;
   }
 
-  const minGuests = guestList.reduce((prev, guest) => prev + guest.people.length + guest.children, 0);
-  const maxGuests = guestList.reduce((prev, guest) => prev + guest.people.length + guest.additionalGuests, 0);
+  const minMaxRange = (guests: Guest[]) => {
+    let min = 0, max = 0;
+    guests.forEach(guest => {
+      let guestMin = guest.people.length + guest.children;
+      min += guestMin;
+      max += guestMin + guest.additionalGuests;
+    })
+    return { min, max };
+  }
+
+  type GuestListWithCount = {
+    guests: Guest[];
+    min: number;
+    max: number;
+  }
+
+  const [filteredGuests, setFilteredGuests] = useState<GuestListWithCount>({
+    guests: [],
+    min: 0,
+    max: 0
+  });
+  useEffect(() => {
+    const guests = guestList.filter(guest => matchFilter(guest));
+    setFilteredGuests({
+      guests,
+      ...minMaxRange(guests),
+    });
+  }, [guestList, guestFilter]);
+
+  const { min, max } = minMaxRange(guestList);
 
   return (
     <Card style={{ padding: '0', overflow: 'hidden' }}>
@@ -365,7 +393,10 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
           borderBottom: '2px solid #f0f0f0'
         }}
       >
-        Guest List ({minGuests}~{maxGuests} guests)
+        {guestFilter
+          ? `Guest List (${filteredGuests.min}~${filteredGuests.max} guests of ${min}~${max} total)`
+          : `Guest List (${min}~${max} guests)`
+        }
       </h2>
       <input
         type='test'
@@ -396,10 +427,9 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
             </tr>
           </thead>
           <tbody>
-            {guestList.map((guest, index) => (
+            {filteredGuests.guests.map((guest, index) => (
               <tr key={index} style={{
                 borderTop: '1px solid #e9ecef',
-                visibility: matchFilter(guest) ? 'visible' : 'collapse'
               }}>
                 <td>
                   {guest.people.map((g, i) => <div key={i}>{g.firstName}</div>)}
