@@ -28,3 +28,4 @@ Thumbs.db
 wedding-site.db
 .vercel
 .env*.local
+*.dump

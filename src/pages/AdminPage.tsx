@@ -380,10 +380,8 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
             <tr style={{ background: '#f8f9fa' }}>
               <th>First Name</th>
               <th>Last Name</th>
-              <th>Email</th>
-              <th>Response</th>
+              <th>RSVP</th>
               <th>Address</th>
-              <th>Phone</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -404,10 +402,8 @@ function AdminGuestList({ guestList, onEdit, onDelete }: AdminGuestListProps): J
                   {guest.additionalGuests ? <br /> : ''}
                   {guest.children ? <br /> : ''}
                 </td>
-                <td>{guest.people.some(g => !!g.email) ? '✓' : ''}</td>
                 <td>{ResponseOutput(guest)}</td>
                 <td>{guest.address ? '✓' : ''}</td>
-                <td>{guest.people.some(g => !!g.phone) ? '✓' : ''}</td>
                 <td>{guest.notes}</td>
                 <td>
                   <button onClick={() => onEdit(guest)}>
