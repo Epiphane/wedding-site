@@ -173,6 +173,10 @@ button:disabled {
   background: #f00;
 }
 
+.hotel>a {
+  color: #005e96;
+}
+
 @media (max-width: 1250px) {
   .canvas-page {
     grid-template-columns: 1fr;
