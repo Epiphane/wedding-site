@@ -1,4 +1,4 @@
-import Guest from "../server/model/guest";
+import Person from "../server/model/person";
 import Sticker from "../server/model/sticker";
 
 export interface StickerId {
@@ -24,14 +24,14 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  setIdentity: (name: string, callback: (info: [Guest | null, Error | null]) => void) => void;
+  setIdentity: (name: string, callback: (info: [Person | null, Error | null]) => void) => void;
   placeSticker: (item: Partial<StickerProps>) => void;
   updateSticker: (item: Partial<StickerProps>) => void;
   clearCanvas: () => void;
 }
 
 export interface SocketData {
-  guestId?: number;
+  personId?: number;
   name: string;
   isAdmin: boolean;
 }

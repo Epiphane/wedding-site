@@ -15,6 +15,7 @@ import { ClientToServerEvents, ServerToClientEvents, SocketData, StickerProps } 
 import GuestController from './controller/guest';
 import Config from './config';
 import Person from './model/person';
+import PersonController from './controller/person';
 
 console.log(`Database options: ${JSON.stringify({
   ...Config.database,
@@ -89,10 +90,10 @@ AppDataSource.initialize()
       socket.on('setIdentity', async (name, callback) => {
         console.log('setIdentity', name);
         try {
-          const guest = await Guest.findByName(name);
-          if (guest) {
-            socket.data.guestId = guest.id;
-            callback([guest, null]);
+          const person = await Person.findByName(name);
+          if (person) {
+            socket.data.personId = person.id;
+            callback([person, null]);
           }
         }
         catch (e: any) {
@@ -101,18 +102,18 @@ AppDataSource.initialize()
       })
 
       socket.on('placeSticker', async (msg: Partial<StickerProps>) => {
-        if (!socket.data.guestId) {
+        if (!socket.data.personId) {
           socket.emit('error', 'Not logged in');
           return;
         }
 
-        const sticker = await GuestController.addSticker(socket.data.guestId, msg);
+        const sticker = await PersonController.addSticker(socket.data.personId, msg);
         socket.broadcast.emit('stickerPlaced', sticker);
       })
 
       socket.on('updateSticker', async (msg: Partial<StickerProps>) => {
-        if (socket.data.guestId) {
-          const newSticker = await GuestController.updateSticker(socket.data.guestId, msg);
+        if (socket.data.personId) {
+          const newSticker = await PersonController.updateSticker(socket.data.personId, msg);
           socket.broadcast.emit('stickerMoved', newSticker);
         }
       })

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, ManyToOne } from "typeorm"
-import Guest from "./guest";
 import { IsNumber, IsOptional, IsString } from "class-validator";
+import Person from "./person";
 
 @Entity()
 export default class Sticker extends BaseEntity {
@@ -12,8 +12,8 @@ export default class Sticker extends BaseEntity {
   @Column({ nullable: true })
   ownerId: number;
 
-  @ManyToOne(() => Guest, (guest) => guest.stickers)
-  owner: Guest;
+  @ManyToOne(() => Person, (person) => person.stickers)
+  owner: Person;
 
   @Column()
   @IsString()

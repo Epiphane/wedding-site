@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, FindOptionsWhere, Unique, ILike, ManyToOne } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, JoinColumn, FindOptionsWhere, Unique, ILike, ManyToOne, OneToMany } from "typeorm"
 import { IsEmail, IsOptional, IsString, ValidateIf } from "class-validator"
 import Guest from "./guest"
+import Sticker from "./sticker"
 
 @Entity()
 @Unique(['firstName', 'lastName'])
@@ -30,7 +31,11 @@ export default class Person extends BaseEntity {
     nullable: false,
     orphanedRowAction: 'delete',
   })
-  guest: Guest
+  guest: Guest;
+
+  @OneToMany(() => Sticker, (sticker) => sticker.owner, { lazy: true })
+  @JoinColumn()
+  stickers: Promise<Sticker[]>;
 
   static async findByName(name: string): Promise<Person | null> {
     const [firstName, lastName] = name.trim().split(' ');
@@ -41,6 +46,9 @@ export default class Person extends BaseEntity {
 
     const [person, count] = await Person.findAndCount({
       where: options,
+      relations: {
+        guest: true
+      }
     });
     if (count === 1) {
       return person[0];

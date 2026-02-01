@@ -65,10 +65,6 @@ export default class Guest extends BaseEntity {
   @Allow()
   people: Person[];
 
-  @OneToMany(() => Sticker, (sticker) => sticker.owner, { lazy: true })
-  @JoinColumn()
-  stickers: Promise<Sticker[]>;
-
   static async findByName(name: string): Promise<Guest | null> {
     const person = await Person.findByName(name);
     return person && person.guest;

@@ -30,23 +30,4 @@ GuestRouter.post('/rsvp', async ctx => {
   ctx.body = await GuestController.setResponse(ctx.state, ctx.request.body as RSVP);
 });
 
-GuestRouter.get('/stickers', async ctx => {
-  ctx.status = 200;
-  ctx.body = await GuestController.getStickers(ctx.state);
-})
-
-GuestRouter.post('/stickers', async ctx => {
-  ctx.status = 201;
-  ctx.body = await GuestController.addSticker(ctx.state.id, ctx.request.body as Sticker);
-})
-
-GuestRouter.put('/stickers/:id', async ctx => {
-  ctx.status = 201;
-  const payload: Partial<Sticker> = {
-    ...ctx.request.body as Sticker,
-    id: +ctx.params.id,
-  }
-  ctx.body = await GuestController.updateSticker(ctx.state.id, payload);
-})
-
 export default GuestRouter;

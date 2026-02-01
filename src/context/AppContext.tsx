@@ -6,15 +6,16 @@ import useLocalStorage from '../utils/useLocalStorage';
 import Guest from '../../server/model/guest';
 import Sticker from '../../server/model/sticker';
 import canvasReducer, { CanvasAction, CanvasState } from '../types/canvas';
+import Person from '../../server/model/person';
 
 interface AppContextType {
   request: (apiUrl: string, init?: RequestInit) => Promise<Response>;
   isAuthenticated: boolean;
   setAdminPassword: (name: string) => Promise<void>;
-  login: (name: string) => Promise<Guest>;
+  login: (name: string) => Promise<Person>;
   logout: () => void;
   model: FrontendModel;
-  guestInfo: Guest | undefined;
+  guestInfo: Person | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
   updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
   canvas: CanvasState;
@@ -73,8 +74,8 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       init = {
         ...init,
         headers: {
-          ...init?.headers,
           Authorization: `Basic ${btoa(`user:${adminPassword}`)}`,
+          ...init?.headers,
           'Content-Type': 'application/json'
         }
       }
@@ -85,7 +86,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
 
   const [canvas, updateCanvas] = useReducer(canvasReducer, [])
   const [myName, setMyName] = useLocalStorage<string>('guestName');
-  const [guestInfo, setGuestInfo] = useState<Guest>();
+  const [guestInfo, setGuestInfo] = useState<Person>();
 
   const testAdminPassword = (password: string): Promise<void> => {
     return request('/guests', { headers: { Authorization: `Basic ${btoa(`user:${password}`)}` } })
@@ -97,7 +98,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       })
   };
 
-  const login = (name: string): Promise<Guest> => {
+  const login = (name: string): Promise<Person> => {
     if (!socket) {
       return Promise.reject('socket unavailable');
     }

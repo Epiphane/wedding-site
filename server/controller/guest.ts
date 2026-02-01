@@ -22,24 +22,4 @@ export default class GuestController {
     await guest.save();
     return rsvp;
   }
-
-  public static async getStickers(guest: Guest): Promise<Sticker[]> {
-    return guest.stickers;
-  }
-
-  public static async addSticker(guestId: Guest["id"], info: Partial<Sticker>): Promise<Sticker> {
-    const sticker = Sticker.create<Sticker>(info);
-    await validateOrReject(sticker, { whitelist: true });
-
-    sticker.ownerId = guestId;
-    return sticker.save();
-  }
-
-  public static async updateSticker(guestId: Guest["id"], info: Partial<Sticker>): Promise<Sticker> {
-    const stickerId = { ownerId: guestId, id: info.id };
-    const partial = Sticker.create<Sticker>(info);
-    await validateOrReject(partial, { skipMissingProperties: true, whitelist: true });
-    await Sticker.update(stickerId, partial);
-    return Sticker.findOneByOrFail(stickerId);
-  }
 }
