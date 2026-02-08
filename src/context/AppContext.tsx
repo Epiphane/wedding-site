@@ -15,7 +15,7 @@ interface AppContextType {
   login: (name: string) => Promise<Person>;
   logout: () => void;
   model: FrontendModel;
-  guestInfo: Person | undefined;
+  personInfo: Person | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
   updateModel: (updater: (prev: FrontendModel) => FrontendModel) => void;
   canvas: CanvasState;
@@ -86,7 +86,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
 
   const [canvas, updateCanvas] = useReducer(canvasReducer, [])
   const [myName, setMyName] = useLocalStorage<string>('guestName');
-  const [guestInfo, setGuestInfo] = useState<Person>();
+  const [personInfo, setPersonInfo] = useState<Person>();
 
   const testAdminPassword = (password: string): Promise<void> => {
     return request('/guests', { headers: { Authorization: `Basic ${btoa(`user:${password}`)}` } })
@@ -107,7 +107,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
         throw err;
       }
 
-      setGuestInfo(info);
+      setPersonInfo(info);
       setMyName(`${info.firstName} ${info.lastName}`);
       return info;
     })
@@ -117,7 +117,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
     if (!socket) {
       return Promise.reject('socket unavailable');
     }
-    setGuestInfo(undefined);
+    setPersonInfo(undefined);
     setMyName(``);
     return socket.emitWithAck('setIdentity', '');
   }
@@ -180,7 +180,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       login,
       logout,
       model,
-      guestInfo,
+      personInfo,
       setModel,
       updateModel,
       sendToBackend,

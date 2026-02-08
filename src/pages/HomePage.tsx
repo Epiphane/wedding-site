@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { JSX } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import NavigationBar from '../components/NavigationBar';
@@ -16,7 +16,9 @@ export default function HomePage(): JSX.Element {
         style={{
           width: '100%',
           height: '600px',
-          background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+          background: 'url("./img/IMG_0141_edit.JPG")',
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -25,7 +27,6 @@ export default function HomePage(): JSX.Element {
           fontStyle: 'italic'
         }}
       >
-        Hero Image
       </div>
 
       {/* Couple Names Section */}
@@ -155,7 +156,8 @@ export default function HomePage(): JSX.Element {
         <Link
           to="/rsvp"
           style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            //background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #999999 0%, #767676 100%)',
             color: 'white',
             border: 'none',
             padding: '15px 40px',
@@ -164,10 +166,11 @@ export default function HomePage(): JSX.Element {
             cursor: 'pointer',
             fontFamily: "'Georgia', 'Times New Roman', serif",
             textDecoration: 'none',
-            display: 'inline-block'
+            display: 'inline-block',
+            pointerEvents: 'none'
           }}
         >
-          RSVP Now
+          RSVP starting 3/22
         </Link>
       </div>
     </React.Fragment>

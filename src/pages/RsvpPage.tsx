@@ -1,9 +1,6 @@
-import React, { ChangeEvent, FormEvent, JSX, useState } from 'react';
+import React, { ChangeEvent, FormEvent, JSX, useContext, useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import Header from '../components/Header';
-import NavigationBar from '../components/NavigationBar';
-import Footer from '../components/Footer';
-import { FrontendModel } from '../types';
+import Guest from '../../server/model/guest';
 
 interface RsvpHandlers {
   handleLookupGuest: () => void;
@@ -14,11 +11,36 @@ interface RsvpHandlers {
 }
 
 export default function RsvpPage(): JSX.Element {
-  const { request, login, model, updateModel, guestInfo, sendToBackend } = useApp();
+  const { request, login, model, updateModel, personInfo, sendToBackend } = useApp();
   const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [guestInfo, setGuestInfo] = useState(personInfo?.guest);
 
-  if (guestInfo === undefined) {
+  useEffect(() => {
+    if (personInfo && personInfo.guest) {
+      setGuestInfo(personInfo.guest);
+    }
+  }, [personInfo]);
+
+  return (
+    <div
+      style={{
+        maxWidth: '500px',
+        margin: '30px auto',
+        textAlign: 'left',
+        background: '#fafafa',
+        padding: '40px',
+        borderRadius: '2px',
+        border: '1px solid #e0e0e0'
+      }}
+    >
+      <h3 style={{ textAlign: 'center', marginBottom: '12px' }}>We're not ready for RSVPs yet!</h3>
+      <p style={{ textAlign: 'center' }}>Please come back after March 22nd.</p>
+
+    </div>
+  );
+
+  if (personInfo === undefined) {
     const handleFormSubmit = (event: FormEvent | MouseEvent) => {
       event.preventDefault();
       request('/guests/me', { headers: { Authorization: `Basic ${btoa(`${nameInput}:test`)}` } })
@@ -109,8 +131,13 @@ export default function RsvpPage(): JSX.Element {
     );
   }
 
+  if (!guestInfo) {
+    return (<div>Loading...</div>);
+  }
+
   if (!guestInfo.response) {
     return (
+
       <div
         style={{
           maxWidth: '500px',
@@ -121,7 +148,7 @@ export default function RsvpPage(): JSX.Element {
           borderRadius: '2px',
           border: '1px solid #e0e0e0'
         }}
-      >
+      >{JSON.stringify(guestInfo)}
         <div
           style={{
             background: '#d4edda',
@@ -132,7 +159,7 @@ export default function RsvpPage(): JSX.Element {
             textAlign: 'center'
           }}
         >
-          Welcome, {guestInfo.firstName}!
+          Welcome, {personInfo.firstName}!
         </div>
         <div style={{ marginBottom: '20px' }}>
           <label
@@ -161,7 +188,7 @@ export default function RsvpPage(): JSX.Element {
             <option value="notAttending">Sorry, can't make it</option>
           </select>
         </div>
-        {/*guestInfo.partnerId &&*/ (
+        {/*personInfo.partnerId &&*/ (
           <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
             <label
               style={{
