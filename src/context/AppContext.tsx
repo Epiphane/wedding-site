@@ -14,6 +14,7 @@ interface AppContextType {
   setAdminPassword: (name: string) => Promise<void>;
   login: (name: string) => Promise<Person>;
   logout: () => void;
+  areRsvpsOpen: boolean;
   model: FrontendModel;
   personInfo: Person | undefined;
   setModel: React.Dispatch<React.SetStateAction<FrontendModel>>;
@@ -64,9 +65,11 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
 
   const [adminPassword, setAdminPassword] = useLocalStorage<string>('adminPassword');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [areRsvpsOpen, setAreRsvpsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setIsAuthenticated(!!adminPassword);
+    setAreRsvpsOpen(!!adminPassword || (new Date()).getTime() >= 1774162800000);
   }, [adminPassword]);
 
   const request = (apiUrl: string, init?: RequestInit) => {
@@ -186,6 +189,7 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
       sendToBackend,
       canvas,
       updateCanvas,
+      areRsvpsOpen,
     }}>
       {children}
     </AppContext.Provider>

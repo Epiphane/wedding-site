@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
 
 export default function HomePage(): JSX.Element {
-  const { model } = useApp();
+  const { model, areRsvpsOpen } = useApp();
   const [name1, name2] = model.coupleNames;
 
   return (
@@ -156,8 +156,9 @@ export default function HomePage(): JSX.Element {
         <Link
           to="/rsvp"
           style={{
-            //background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            background: 'linear-gradient(135deg, #999999 0%, #767676 100%)',
+            background: areRsvpsOpen
+              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+              : 'linear-gradient(135deg, #999999 0%, #767676 100%)',
             color: 'white',
             border: 'none',
             padding: '15px 40px',
@@ -167,10 +168,10 @@ export default function HomePage(): JSX.Element {
             fontFamily: "'Georgia', 'Times New Roman', serif",
             textDecoration: 'none',
             display: 'inline-block',
-            pointerEvents: 'none'
+            pointerEvents: areRsvpsOpen ? undefined : 'none'
           }}
         >
-          RSVP starting 3/22
+          {areRsvpsOpen ? "RSVP" : "RSVP starting 3/22"}
         </Link>
       </div>
     </React.Fragment>

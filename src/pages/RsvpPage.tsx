@@ -11,7 +11,7 @@ interface RsvpHandlers {
 }
 
 export default function RsvpPage(): JSX.Element {
-  const { request, login, model, updateModel, personInfo, sendToBackend } = useApp();
+  const { request, login, model, updateModel, personInfo, sendToBackend, areRsvpsOpen } = useApp();
   const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guestInfo, setGuestInfo] = useState(personInfo?.guest);
@@ -22,23 +22,25 @@ export default function RsvpPage(): JSX.Element {
     }
   }, [personInfo]);
 
-  return (
-    <div
-      style={{
-        maxWidth: '500px',
-        margin: '30px auto',
-        textAlign: 'left',
-        background: '#fafafa',
-        padding: '40px',
-        borderRadius: '2px',
-        border: '1px solid #e0e0e0'
-      }}
-    >
-      <h3 style={{ textAlign: 'center', marginBottom: '12px' }}>We're not ready for RSVPs yet!</h3>
-      <p style={{ textAlign: 'center' }}>Please come back after March 22nd.</p>
+  if (!areRsvpsOpen) {
+    return (
+      <div
+        style={{
+          maxWidth: '500px',
+          margin: '30px auto',
+          textAlign: 'left',
+          background: '#fafafa',
+          padding: '40px',
+          borderRadius: '2px',
+          border: '1px solid #e0e0e0'
+        }}
+      >
+        <h3 style={{ textAlign: 'center', marginBottom: '12px' }}>We're not ready for RSVPs yet!</h3>
+        <p style={{ textAlign: 'center' }}>Please come back after March 22nd.</p>
 
-    </div>
-  );
+      </div>
+    );
+  }
 
   if (personInfo === undefined) {
     const handleFormSubmit = (event: FormEvent | MouseEvent) => {
