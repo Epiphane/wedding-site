@@ -17,7 +17,7 @@ export default function RsvpPage(): JSX.Element {
   const [attending, setAttending] = useState<boolean>(true);
   const [plusOne, setPlusOne] = useState<boolean>(false);
   const [plusOneName, setPlusOneName] = useState<string>('');
-  const [onsite, setOnsite] = useState<boolean>(true);
+  const [onsite, setOnsite] = useState<string>('both');
 
   // initialize form state from any existing response when guestInfo changes
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function RsvpPage(): JSX.Element {
       setAttending(guestInfo.response.attending);
       setPlusOne(guestInfo.response.plusOne);
       setPlusOneName(guestInfo.response.plusOneName || '');
-      setOnsite(guestInfo.response.onsite || false);
+      setOnsite(guestInfo.response.onsite);
     }
   }, [guestInfo]);
 
@@ -158,7 +158,7 @@ export default function RsvpPage(): JSX.Element {
   };
 
   const handleOnsiteChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setOnsite(e.target.value === 'yes');
+    setOnsite(e.target.value);
   };
 
   const handleSubmitRsvp = () => {
@@ -276,7 +276,7 @@ export default function RsvpPage(): JSX.Element {
           </label>
           <select
             onChange={handleOnsiteChange}
-            value={onsite ? 'yes' : 'no'}
+            value={onsite}
             style={{
               width: '100%',
               padding: '10px',
@@ -286,8 +286,10 @@ export default function RsvpPage(): JSX.Element {
               boxSizing: 'border-box'
             }}
           >
-            <option value="yes">I'll stay on site!</option>
-            <option value="no">I'll find my own lodging</option>
+            <option value="both">{guestInfo.people.length === 1 ? "I'll" : "We'll"} stay Friday & Saturday!</option>
+            <option value="fri">{guestInfo.people.length === 1 ? "I'll" : "We'll"} stay Friday night!</option>
+            <option value="sat">{guestInfo.people.length === 1 ? "I'll" : "We'll"} stay Saturday night!</option>
+            <option value="">{guestInfo.people.length === 1 ? "I'll" : "We'll"} find {guestInfo.people.length === 1 ? "my" : "our"} own lodging</option>
           </select>
         </div>
       )}

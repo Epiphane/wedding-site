@@ -26,9 +26,9 @@ export default class RSVP extends BaseEntity {
   @IsString()
   plusOneName: string;
 
-  @Column({ default: false })
-  @IsBoolean()
-  onsite: boolean;
+  @Column({ default: '' })
+  @IsString()
+  onsite: string;
 
   toJSON() {
     const { guest, id, ...rest } = this;
