@@ -56,40 +56,31 @@ export default function HomePage(): JSX.Element {
                 lineHeight: '1.2'
               }}
             >
-              {name1}
-            </div>
-          </div>
-          <div
-            style={{
-              fontSize: '1.5em',
-              color: '#666',
-              fontStyle: 'italic'
-            }}
-          >
-            and
-          </div>
-          <div style={{ textAlign: 'left' }}>
-            <div
-              style={{
-                fontSize: '2.5em',
-                fontWeight: '400',
-                color: '#333',
-                lineHeight: '1.2'
-              }}
-            >
-              {name2}
+              {name1} <span style={{
+                color: '#999',
+              }}>&</span> {name2}
             </div>
           </div>
         </div>
         <div
           style={{
-            marginTop: '40px',
-            fontSize: '1.8em',
+            marginTop: '25px',
+            fontSize: '1.5em',
+            color: '#666',
+            fontStyle: 'italic'
+          }}
+        >
+          invite you to their
+        </div>
+        <div
+          style={{
+            marginTop: '25px',
+            fontSize: '2.2em',
             color: '#333',
             fontFamily: "'Georgia', 'Times New Roman', serif"
           }}
         >
-          {model.weddingDate} | 4:00 PM
+          Wedding Reception
         </div>
       </div>
 
