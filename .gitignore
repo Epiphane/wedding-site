@@ -29,3 +29,5 @@ wedding-site.db
 .vercel
 .env*.local
 *.dump
+
+dump_latest.sh

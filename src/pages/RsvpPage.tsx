@@ -1,17 +1,8 @@
-import React, { ChangeEvent, FormEvent, JSX, useContext, useEffect, useState } from 'react';
+import React, { ChangeEvent, FormEvent, JSX, useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import Guest from '../../server/model/guest';
-
-interface RsvpHandlers {
-  handleLookupGuest: () => void;
-  handleUpdateAttending: (e: ChangeEvent<HTMLSelectElement>) => void;
-  handleUpdatePlusOneName: (e: ChangeEvent<HTMLInputElement>) => void;
-  handleUpdatePlusOneAttending: (e: ChangeEvent<HTMLSelectElement>) => void;
-  handleSubmitRsvp: () => void;
-}
 
 export default function RsvpPage(): JSX.Element {
-  const { request, login, model, updateModel, personInfo, sendToBackend, areRsvpsOpen } = useApp();
+  const { request, login, model, personInfo, areRsvpsOpen } = useApp();
   const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guestInfo, setGuestInfo] = useState(personInfo?.guest);
@@ -21,6 +12,22 @@ export default function RsvpPage(): JSX.Element {
       setGuestInfo(personInfo.guest);
     }
   }, [personInfo]);
+
+  // local RSVP state pieces matching rsvp.ts
+  const [attending, setAttending] = useState<boolean>(true);
+  const [plusOne, setPlusOne] = useState<boolean>(false);
+  const [plusOneName, setPlusOneName] = useState<string>('');
+  const [onsite, setOnsite] = useState<boolean>(true);
+
+  // initialize form state from any existing response when guestInfo changes
+  useEffect(() => {
+    if (guestInfo && guestInfo.response) {
+      setAttending(guestInfo.response.attending);
+      setPlusOne(guestInfo.response.plusOne);
+      setPlusOneName(guestInfo.response.plusOneName || '');
+      setOnsite(guestInfo.response.onsite || false);
+    }
+  }, [guestInfo]);
 
   if (!areRsvpsOpen) {
     return (
@@ -137,32 +144,125 @@ export default function RsvpPage(): JSX.Element {
     return (<div>Loading...</div>);
   }
 
-  if (!guestInfo.response) {
-    return (
+  // event handlers updating local state
+  const handleAttendingChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setAttending(e.target.value === 'attending');
+  };
 
-      <div
-        style={{
-          maxWidth: '500px',
-          margin: '30px auto',
-          textAlign: 'left',
-          background: '#fafafa',
-          padding: '40px',
-          borderRadius: '2px',
-          border: '1px solid #e0e0e0'
-        }}
-      >{JSON.stringify(guestInfo)}
+  const handleBringPlusOneToggle = (e: ChangeEvent<HTMLInputElement>) => {
+    setPlusOne(e.target.checked);
+  };
+
+  const handlePlusOneNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPlusOneName(e.target.value);
+  };
+
+  const handleOnsiteChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setOnsite(e.target.value === 'yes');
+  };
+
+  const handleSubmitRsvp = () => {
+    if (!guestInfo) return;
+
+    const payload = {
+      attending,
+      plusOne,
+      plusOneName: plusOne ? plusOneName : '',
+      onsite
+    };
+
+    request('/guests/me/rsvp', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }).then(res => {
+      if (res.status === 201) {
+        // refresh guest info from server
+        return request('/guests/me');
+      }
+      throw new Error('Failed to submit RSVP');
+    }).then(res => res && res.json())
+      .then(data => {
+        // update guestInfo so banner shows and form is populated
+        setGuestInfo(data);
+      })
+      .catch(err => setError(err.message || String(err)));
+  };
+
+  // Get the names of all people in the guest group
+  const guestNames = guestInfo.people && guestInfo.people.length > 0
+    ? guestInfo.people.map(p => `${p.firstName} ${p.lastName}`).join(', ')
+    : personInfo?.firstName;
+
+  return (
+
+    <div
+      style={{
+        maxWidth: '500px',
+        margin: '30px auto',
+        textAlign: 'left',
+        background: '#fafafa',
+        padding: '40px',
+        borderRadius: '2px',
+        border: '1px solid #e0e0e0'
+      }}
+    >
+      {guestInfo.response ? (
         <div
           style={{
             background: '#d4edda',
             color: '#155724',
             padding: '15px',
-            borderRadius: '5px',
+            borderRadius: '4px',
             marginBottom: '20px',
             textAlign: 'center'
           }}
         >
-          Welcome, {personInfo.firstName}!
+          Thanks, {personInfo.firstName}!<br style={{ marginBottom: '4px' }} />You can update your response below.
         </div>
+      ) : (<div
+        style={{
+          background: '#d4edda',
+          color: '#155724',
+          padding: '15px',
+          borderRadius: '5px',
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}
+      >
+        Welcome, {personInfo.firstName}!
+      </div>
+      )}
+
+      {/* Main attendance question for guest group */}
+      <div style={{ marginBottom: '20px' }}>
+        <label
+          style={{
+            display: 'block',
+            marginBottom: '5px',
+            color: '#333',
+            fontWeight: 'bold'
+          }}
+        >
+          Will you{guestInfo.people && guestInfo.people.length > 1 ? ` and ${guestInfo.people.filter(p => p.id !== personInfo.id).map(p => p.firstName).join(', ')}` : ''} attend?
+        </label>
+        <select
+          onChange={handleAttendingChange}
+          value={attending ? 'attending' : 'notAttending'}
+          style={{
+            width: '100%',
+            padding: '10px',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+            fontSize: '1em',
+            boxSizing: 'border-box'
+          }}
+        >
+          <option value="attending">Yes, {guestInfo.people.length > 1 ? "We'll" : "I'll"} be there!</option>
+          <option value="notAttending">Sorry, can't make it</option>
+        </select>
+      </div>
+
+      {guestInfo.lodgingOptions !== '' && (
         <div style={{ marginBottom: '20px' }}>
           <label
             style={{
@@ -172,11 +272,11 @@ export default function RsvpPage(): JSX.Element {
               fontWeight: 'bold'
             }}
           >
-            Will you attend?
+            We would love for you to stay on-site!
           </label>
           <select
-            onChange={() => { }}
-            value={model.rsvpAttending}
+            onChange={handleOnsiteChange}
+            value={onsite ? 'yes' : 'no'}
             style={{
               width: '100%',
               padding: '10px',
@@ -186,34 +286,42 @@ export default function RsvpPage(): JSX.Element {
               boxSizing: 'border-box'
             }}
           >
-            <option value="attending">Yes, I'll be there!</option>
-            <option value="notAttending">Sorry, can't make it</option>
+            <option value="yes">I'll stay on site!</option>
+            <option value="no">I'll find my own lodging</option>
           </select>
         </div>
-        {/*personInfo.partnerId &&*/ (
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '5px',
-                color: '#333',
-                fontWeight: 'bold'
-              }}
-            >
-              Plus One (Optional)
-            </label>
-            <p style={{ color: '#666', fontSize: '0.9em', marginTop: '5px' }}>
-              You're invited to bring a guest!
-            </p>
-            <div style={{ marginBottom: '20px', marginTop: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#333' }}>
-                Plus One Name
-              </label>
+      )}
+
+      {/* Additional guests form (only if additionalGuests > 0) */}
+      {guestInfo.additionalGuests > 0 && (
+        <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '15px',
+              color: '#333',
+              fontWeight: 'bold'
+            }}
+          >
+            Will you be bringing an additional guest?
+          </label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', marginBottom: '15px', }}>
+            <input
+              type="checkbox"
+              checked={plusOne}
+              onChange={handleBringPlusOneToggle}
+              style={{ marginRight: '8px', }}
+            />
+            Yes
+          </label>
+
+          {plusOne && (
+            <div style={{ marginBottom: '20px' }}>
               <input
                 type="text"
-                value={model.rsvpPlusOneName}
-                onChange={() => { }}
-                placeholder="Guest name (optional)"
+                value={plusOneName}
+                onChange={handlePlusOneNameChange}
+                placeholder="Name"
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -224,139 +332,27 @@ export default function RsvpPage(): JSX.Element {
                 }}
               />
             </div>
-            {model.rsvpPlusOneName !== '' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#333' }}>
-                  Will they attend?
-                </label>
-                <select
-                  onChange={() => { }}
-                  value={model.rsvpPlusOneAttending}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '1em',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <option value="attending">Yes</option>
-                  <option value="notAttending">No</option>
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-        <button
-          onClick={() => { }}
-          style={{
-            background: '#333',
-            color: 'white',
-            border: 'none',
-            padding: '12px 30px',
-            fontSize: '1em',
-            borderRadius: '2px',
-            cursor: 'pointer',
-            fontFamily: "'Georgia', 'Times New Roman', serif",
-            width: '100%',
-            marginTop: '20px'
-          }}
-        >
-          Submit RSVP
-        </button>
-      </div>
-    );
-  }
+          )}
+        </div>
+      )}
 
-  return (
-    <div
-      style={{
-        maxWidth: '500px',
-        margin: '30px auto',
-        background: '#d4edda',
-        color: '#155724',
-        padding: '15px',
-        borderRadius: '5px',
-        textAlign: 'center',
-        border: '1px solid #e0e0e0'
-      }}
-    >
-      Thank you! Your RSVP has been received. Total RSVPs: {model.rsvpCount}
+      <button
+        onClick={handleSubmitRsvp}
+        style={{
+          background: '#333',
+          color: 'white',
+          border: 'none',
+          padding: '12px 30px',
+          fontSize: '1em',
+          borderRadius: '2px',
+          cursor: 'pointer',
+          fontFamily: "'Georgia', 'Times New Roman', serif",
+          width: '100%',
+          marginTop: '20px'
+        }}
+      >
+        Submit RSVP
+      </button>
     </div>
   );
-
-  const handleUpdateAttending = (e: ChangeEvent<HTMLSelectElement>) => {
-    updateModel(prev => ({
-      ...prev,
-      rsvpAttending: e.target.value as 'attending' | 'notAttending'
-    }));
-  };
-
-  const handleUpdatePlusOneName = (e: ChangeEvent<HTMLInputElement>) => {
-    updateModel(prev => ({ ...prev, rsvpPlusOneName: e.target.value }));
-  };
-
-  const handleUpdatePlusOneAttending = (e: ChangeEvent<HTMLSelectElement>) => {
-    updateModel(prev => ({
-      ...prev,
-      rsvpPlusOneAttending: e.target.value as 'attending' | 'notAttending'
-    }));
-  };
-
-  const handleSubmitRsvp = () => {
-    if (model.rsvpStep === 'guestConfirmed') {
-      // const rsvp = {
-      //   guestName: model.confirmedGuest.name,
-      //   email: model.confirmedGuest.email,
-      //   attending: model.rsvpAttending,
-      //   plusOneName: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneName : null,
-      //   plusOneAttending: model.confirmedGuest.plusOne && model.rsvpPlusOneName !== '' ? model.rsvpPlusOneAttending : null
-      // };
-      // // sendToBackend({ type: 'submitRsvpToBackend', rsvp });
-      // updateModel(prev => ({ ...prev, rsvpSubmitted: true }));
-    }
-  };
-
-  // return (
-  //   <React.Fragment>
-  //     <div
-  //       style={{
-  //         background: 'white',
-  //         padding: '80px 20px',
-  //         textAlign: 'center',
-  //         minHeight: '60vh'
-  //       }}
-  //     >
-  //       <h2
-  //         style={{
-  //           fontSize: '2em',
-  //           marginBottom: '20px',
-  //           color: '#333',
-  //           fontWeight: '400',
-  //           fontFamily: "'Georgia', 'Times New Roman', serif"
-  //         }}
-  //       >
-  //         RSVP
-  //       </h2>
-  //       <p
-  //         style={{
-  //           color: '#666',
-  //           fontSize: '1.1em',
-  //           marginBottom: '40px',
-  //           fontFamily: "'Georgia', 'Times New Roman', serif"
-  //         }}
-  //       >
-  //         We'd love to celebrate with you!
-  //       </p>
-  //       {renderRsvpForm(model, {
-  //         handleLookupGuest,
-  //         handleUpdateAttending,
-  //         handleUpdatePlusOneName,
-  //         handleUpdatePlusOneAttending,
-  //         handleSubmitRsvp
-  //       })}
-  //     </div>
-  //   </React.Fragment>
-  // );
 }

@@ -10,6 +10,7 @@ export interface RsvpResponse {
   attending: AttendanceStatus;
   plusOneName: string | null;
   plusOneAttending: AttendanceStatus | null;
+  onsite?: boolean;
 }
 
 export interface FrontendModel {

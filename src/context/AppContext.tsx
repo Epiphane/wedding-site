@@ -73,14 +73,14 @@ export function AppProvider({ children, socket }: AppProviderProps): JSX.Element
   }, [adminPassword]);
 
   const request = (apiUrl: string, init?: RequestInit) => {
-    if (adminPassword) {
-      init = {
-        ...init,
-        headers: {
-          Authorization: `Basic ${btoa(`user:${adminPassword}`)}`,
-          ...init?.headers,
-          'Content-Type': 'application/json'
-        }
+    const username = myName || 'nouser';
+    const password = adminPassword || 'nopassword';
+    init = {
+      ...init,
+      headers: {
+        Authorization: `Basic ${btoa(`${username}:${password}`)}`,
+        ...init?.headers,
+        'Content-Type': 'application/json'
       }
     }
     const backendUrl = process.env.REACT_APP_SOCKET_URL || window.location.origin;

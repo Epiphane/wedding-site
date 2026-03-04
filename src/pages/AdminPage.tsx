@@ -19,6 +19,7 @@ const defaultGuest = {
   city: '',
   state: '',
   zipCode: '',
+  lodgingOptions: '',
   additionalGuests: 0,
   children: 0,
   notes: '',
@@ -232,6 +233,27 @@ function AdminGuestForm({ guestInfo, onSave, onCancel }: AdminGuestFormProps): J
         {AdminTextInput({ prop: 'city' })}
         {AdminTextInput({ prop: 'state' })}
         {AdminTextInput({ prop: 'zipCode' })}
+        <div>
+          <select
+            value={guest.lodgingOptions || ''}
+            onChange={e => updateGuest({ lodgingOptions: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '10px',
+              border: '1px solid #ddd',
+              borderRadius: '5px',
+              fontSize: '1em',
+              boxSizing: 'border-box',
+              background: 'white',
+            }}
+          >
+            <option value="">Not onsite</option>
+            <option value="sangha">Sangha House</option>
+            <option value="orchard">Orchard House</option>
+            <option value="yurt">Yurt</option>
+            <option value="cabin">Cabin</option>
+          </select>
+        </div>
         <div>
           <label>Additional: </label>
           <input

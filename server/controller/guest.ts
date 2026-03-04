@@ -17,6 +17,7 @@ export default class GuestController {
 
     rsvp.guest = guest;
     rsvp.responseTime = new Date();
+    // if the payload includes onsite flag, it will be set via create above
     guest.response = rsvp;
 
     await guest.save();
